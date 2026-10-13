@@ -45,5 +45,5 @@
 - 결정 반영: A-1 안 A(런타임 서버 없음), A-2 카카오맵, A-4 숙소 기본안, 카카오 계정에 기존 앱 없음 → 새 앱이 무료 쿼터 대상
 - 생성: `frontend/`(React·TS·Vite·Tailwind, PWA manifest, 가상 데이터셋, 지도·필터·목록·반려견 조건 시트), `ingest/`(Pydantic 모델·판정 규칙·검증 CLI), `.devcontainer/`, `CLAUDE.md`
 - 모델 변경: `Evidence.petStatus` 추가(출처별 동반 여부 → 최종 상태 판정 입력)
-- 테스트(이 작업 환경): npm·PyPI 접근이 정책상 차단되어 의존성 설치 불가 → Python 테스트 11건은 pytest 대체 실행기로 통과, 프론트 순수 로직은 로컬 TypeScript로 strict 타입 검사 + 테스트 9건 통과. **React 컴포넌트 타입 검사·빌드·화면 확인은 Codespaces에서 사용자 확인 필요**
+- 테스트(이 작업 환경): npm·PyPI 접근이 정책상 차단되어 의존성 설치 불가 → Python 테스트 11건은 pytest 대체 실행기로 통과, 프론트 순수 로직은 로컬 TypeScript로 strict 타입 검사 + 테스트 9건 통과. **React 컴포넌트 타입 검사·빌드·화면 확인은 Codespaces에서 사용자 확인 필요**- Codespaces 실행 결과(사용자): Vitest 9건 통과, `npm run build` 성공(JS 235KB / gzip 74KB), pytest 11건 통과
 
