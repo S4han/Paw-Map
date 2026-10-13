@@ -33,3 +33,9 @@ export const matchLabel: Record<MatchStatus, { icon: string; text: string; class
   NEEDS_CONFIRMATION: { icon: '🟡', text: '확인 필요', className: 'bg-amber-50 text-amber-900 ring-amber-300' },
   MISMATCH: { icon: '🔴', text: '조건 불일치', className: 'bg-rose-50 text-rose-800 ring-rose-200' },
 }
+
+// 출처 표시(공공누리 등 이용조건): 기관명 + 원문 사이트
+export const sourceLink: Partial<Record<SourceId, { name: string; url: string }>> = {
+  KTO_PET: { name: '한국관광공사 반려동물 동반여행 정보', url: 'https://www.data.go.kr/data/15135102/openapi.do' },
+  MFDS_PET: { name: '식품의약품안전처 식품안전나라 반려동물 동반 가능 업소 현황', url: 'https://www.foodsafetykorea.go.kr/portal/petKorea.do' },
+}

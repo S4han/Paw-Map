@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }) => {
 test('첫 화면: 가상 데이터 안내, 목록 모드, 출처·기준일', async ({ page }) => {
   await expect(page.getByText('가상(Mock) 데이터로 보여주는 개발용 화면')).toBeVisible()
   await expect(page.getByText('카카오 지도 키가 없어 목록으로 보여드려요')).toBeVisible()
-  await expect(page.getByText(/자료: 가상 데이터/)).toBeVisible()
+  await expect(page.getByText(/자료:/)).toContainText('가상 데이터')
   await expect(page.getByText('방문 전 업체에 꼭 확인하세요')).toBeVisible()
 })
 
