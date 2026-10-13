@@ -93,6 +93,20 @@ export function MapView({ searchCenter, myLocation, radius, places, selectedId, 
     // 지도는 한 번만 만든다. 이후 이동은 아래 효과들이 담당
   }, [])
 
+  // 지도 영역 크기가 바뀌면(iOS Safari 주소창 접힘으로 dvh 변경, 화면 회전 등) 카카오 지도는 relayout() 전까지
+  // 위치·타일을 어긋나게 그린다(2026-10-13 iPhone 실기기에서 남쪽 바다·빈 타일로 표시됨). 중심을 지키며 다시 맞춘다.
+  useEffect(() => {
+    const el = containerRef.current
+    if (!map || !el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => {
+      const c = map.getCenter()
+      map.relayout()
+      map.setCenter(c)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [map])
+
   // 검색 반경 원 + 기준점 + 지도 범위 맞추기
   useEffect(() => {
     const kakao = window.kakao
