@@ -18,3 +18,11 @@
   - 클라우드 작업 환경 네트워크 정책이 `apis.data.go.kr`, `places.googleapis.com`, `developers.google.com`, `www.foodsafetykorea.go.kr` 등을 차단
   - API 키 없음 → 실측(V-1~V-15) 미실행
 - 다음: 사용자 PC에서 PoC 실행 → 결과 요약으로 `api-analysis.md` 확정, 월 0원 판정(Z-1~Z-10)
+
+### 실측 진행 (Codespaces)
+
+- 관광공사 `KorPetTourService2`: Codespaces(해외 IP)에서 정상 호출됨. 제주 `areaCode=39` 22건 vs `lDongRegnCd=50` 330건으로 큰 차이. 제주시청 반경 10km 위치기반 검색 결과 1건 → 위치기반 검색 누락 의심, 전체 목록과 비교하도록 스크립트 보강(재실행 대기)
+- 관광공사 상세 필드: `acmpyTypeCd`, `acmpyPsblCpam`, `acmpyNeedMtr`, `etcAcmpyInfo` 확인
+- Google: 기존 키가 HTTP 리퍼러 제한 키라 403 → PoC 전용 키 생성 안내(재실행 대기)
+- 식약처 파일: 2,813곳, 제주 103곳, 열 5개(식별자·좌표·날짜 없음). xlsx 시트 크기 정보 오류로 읽기 방식 수정
+
