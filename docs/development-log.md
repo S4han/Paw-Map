@@ -88,3 +88,4 @@
 - 이 작업 환경에서는 npm 설치가 막혀 E2E·빌드 실행 불가 → Codespaces 확인 필요- 결정 D-8: 공개 범위 안 A(전체 공개) — 사용자 확인 "공개해도 이상 없음". 출처 표시를 기관명 + 원문 링크로 강화- Codespaces 검증(사용자): Vitest 43건 통과, Playwright E2E 7건 통과(15.9초, Pixel 7 화면). 브라우저 라이브러리 설치가 기본 이미지의 서명 없는 Yarn apt 저장소에 막혀 → 저장소 끄고 `playwright install-deps`로 해결, devcontainer 에 자동화- 첫 배포(사용자): Cloudflare Pages `paw-map-1bi.pages.dev`(이름 `paw-map` 선점으로 접미사 부여). 직후 SSL 오류(인증서 발급 대기) → 해소. 카카오 도메인 미등록으로 "지도를 불러오지 못했어요" → 등록 후 해소. 실데이터·출처 표시 정상
 - iPhone 실기기: 지도가 128km 축척 남쪽 바다·빈 타일로 표시(목록 거리는 정상) → 지도 영역 크기 변화(Safari 주소창 접힘에 따른 dvh 변경) 후 relayout 누락으로 판단, ResizeObserver 로 relayout + 중심 유지 추가(재배포 후 확인 필요)
 
+- 배포 경로 문제: wrangler 가 프로젝트를 만들 때 프로덕션 브랜치를 당시 git 브랜치(`claude/step9-release`)로 잡아 `--branch main` 배포가 모두 Preview 로 들어감 → 기본 주소 "Nothing is here yet". API 로 프로덕션 브랜치를 `main` 으로 변경 후 재배포 → Production 확인(ba77a4a). 배포별 주소(`xxxxxxxx.paw-map-1bi.pages.dev`)는 카카오 미등록이라 지도 안 뜸 → 고정 주소로만 점검
