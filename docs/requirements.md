@@ -1,6 +1,6 @@
 # PAW MAP — 요구사항 정의서 (STEP 1)
 
-- 문서 버전: v1.0-draft (마스터 지침 v0.2 기준, 사용자 승인 대기)
+- 문서 버전: v1.0 (마스터 지침 v0.2 기준, 사용자 승인 2026-10-13)
 - 작성일: 2026-10-13
 - 기준 문서: PAW MAP 프로젝트 마스터 지침 v0.2
 - 표기: **[검증 필요]** = STEP 2 이전에는 사실로 간주하지 않는 항목
@@ -182,7 +182,7 @@
 | 프로필 항목 | 충족 | 명시적 불충족 | 값 없음 |
 |---|---|---|---|
 | `weightKg` | `minWeightKg ≤ weightKg ≤ maxWeightKg` (있는 경계만 비교, 양쪽 다 없으면 값 없음) | 범위를 벗어남 | `min/maxWeightKg` 둘 다 없음 |
-| `dogCount` | `dogCount ≤ maxDogs` | `dogCount > maxDogs` | `maxDogs` 없음 (단, Q-2 참고) |
+| `dogCount` | `dogCount ≤ maxDogs`, 또는 `dogCount = 1`이고 `PetStatus = ALLOWED`(Q-2) | `dogCount > maxDogs` | `dogCount ≥ 2`이고 `maxDogs` 없음 |
 | `indoorRequired = true` | `indoorAllowed = true` | `indoorAllowed = false` | `indoorAllowed` 없음 |
 
 경계값 규칙: "5kg 이하" → `maxWeightKg = 5`, 5.0kg은 충족. "5kg 미만"은 `maxWeightKg = 4.9`로 바꾸지 않고 별도 플래그(`maxWeightExclusive`)로 보관 — STEP 7에서 모델 확정.
@@ -366,12 +366,12 @@
 
 ---
 
-## 11. 확인이 필요한 사항 (개발 진행에 필요한 것만)
+## 11. 결정 사항
 
-| # | 질문 | 기본안(답이 없으면 이대로 진행) |
+| # | 질문 | 결정 (2026-10-13 사용자 확정) |
 |---|---|---|
 | Q-1 | 여러 마리의 몸무게가 다를 때 | 가장 무거운 아이 몸무게 하나만 입력(안내 문구 표시) |
-| Q-2 | 마릿수 1마리일 때 `maxDogs` 정보가 없으면? | **동반 가능 = 최소 1마리 허용으로 보고 충족 처리**, 2마리 이상일 때만 `maxDogs`가 필요. (이렇게 하지 않으면 거의 모든 장소가 `확인 필요`가 됨) |
+| Q-2 | 마릿수 1마리일 때 `maxDogs` 정보가 없으면? | **`PetStatus = ALLOWED`이면 최소 1마리 허용으로 보고 충족 처리**, 2마리 이상일 때만 `maxDogs`가 필요. "값 없음을 허용으로 보지 않는다" 원칙의 **유일한 승인된 예외**이며, 근거는 '동반 가능'이라는 확인된 사실 자체다 |
 
 ---
 
@@ -379,5 +379,6 @@
 
 - 완료: 기존 저장소·환경 점검, 사용자 스토리·수용 기준, 카테고리·반경, 프로필 입력 UX, 두 상태 체계와 판정 규칙, 출처·확인일·충돌 규칙, 화면 구성, 비기능 요구사항, 월 0원 검증 항목
 - 생성 파일: `docs/requirements.md`, `docs/api-analysis.md`(이전 세션의 미승인 사전 조사 이관)
-- 미해결: Q-1, Q-2 / 초기 검증 지역 제주의 데이터 충분성(STEP 2)
+- 결정: Q-1, Q-2 기본안 확정(2026-10-13), STEP 1 승인
+- 미해결: 초기 검증 지역 제주의 데이터 충분성(STEP 2)
 - 다음 단계: 사용자 승인 후 STEP 2 — 데이터 소스 및 API PoC
