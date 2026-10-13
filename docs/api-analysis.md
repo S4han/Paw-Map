@@ -287,7 +287,8 @@
 | 카카오맵 웹 | `https://map.kakao.com/link/to/{이름},{위도},{경도}` (위도 먼저) | 🔷 |
 | 카카오맵 앱 | `kakaomap://route?ep={위도},{경도}&by=CAR` | ⚠️ |
 | 네이버지도 앱 | `nmap://route/car?dlat=…&dlng=…&dname=…&appname=…` | ❓ (기억 기반) |
-| 네이버지도 웹 | 미확인 | ❓ |
+| 네이버지도 웹 | 길찾기 형식 미확인 → STEP 8은 장소 검색 링크 `map.naver.com/p/search/{이름}`로 대체 | ❓ (실기기 확인 V-12) |
+| Google 지도 | `https://www.google.com/maps/search/?api=1&query={이름 주소 또는 위도,경도}` — 좌표만이면 핀만 표시, `api=1` 없으면 매개변수 무시 | 🔷 (공식 문서) |
 
 → MVP는 **웹 링크 우선**(앱이 설치돼 있으면 OS가 앱으로 열어줌), 앱 스킴은 실기기 테스트 후 추가.
 

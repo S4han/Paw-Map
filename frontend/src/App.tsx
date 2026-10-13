@@ -4,15 +4,17 @@ import { sourceLabel } from './components/labels'
 import { MapView } from './components/MapView'
 import { MatchFilter, type MatchFilterValue } from './components/MatchFilter'
 import { PlaceCard } from './components/PlaceCard'
+import { PlaceDetail } from './components/PlaceDetail'
 import { ProfileSheet } from './components/ProfileSheet'
 import { TopBar } from './components/TopBar'
 import { categories, DEFAULT_CENTER, DEFAULT_RADIUS, type SearchRadius } from './config/app'
-import type { LatLng } from './domain/distance'
+import { distanceMeters, type LatLng } from './domain/distance'
 import { filterPlaces, type PetStatusFilter } from './domain/filters'
 import { isProfileSet, matchPlace } from './domain/match'
 import { regionsForCircle } from './domain/regions'
 import { useManifest, useRegionPlaces } from './hooks/useDataset'
 import { useGeolocation } from './hooks/useGeolocation'
+import { usePlaceRoute } from './hooks/usePlaceRoute'
 import { profileSummary, useProfile } from './hooks/useProfile'
 import type { SearchCandidate } from './services/kakaoSearch'
 import type { Category } from './types/place'
@@ -24,6 +26,7 @@ export default function App() {
   const manifest = manifestState.status === 'ready' ? manifestState.manifest : null
   const { profile, setProfile } = useProfile()
   const { geo, locate } = useGeolocation()
+  const { placeId, open: openDetail, close: closeDetail } = usePlaceRoute()
 
   const [center, setCenter] = useState<SearchCenter>({ ...DEFAULT_CENTER, label: '제주시청(기본 위치)' })
   const [fitKey, setFitKey] = useState(0) // 새 검색마다 증가 → 지도를 반경에 맞춤
@@ -55,6 +58,10 @@ export default function App() {
     [matched, profileOn, matchFilter],
   )
   const visiblePlaces = useMemo(() => visible.map((v) => v.place), [visible])
+
+  // 상세: 목록에 보이지 않는 장소(공유 링크)도 열 수 있도록 불러온 전체 데이터에서 찾는다
+  const detailPlace = placeId && placesState.status === 'ready' ? placesState.places.find((p) => p.id === placeId) : undefined
+  const detailMissing = Boolean(placeId) && placesState.status === 'ready' && !detailPlace
 
   const moveTo = useCallback((next: SearchCenter) => {
     setCenter(next)
@@ -134,6 +141,19 @@ export default function App() {
               <span className="font-medium text-slate-800">{center.label}</span> 기준 · {visible.length}곳 · 거리순
             </p>
             {profileOn && results.length > 0 && <MatchFilter value={matchFilter} counts={matchCounts} onChange={setMatchFilter} />}
+            {selectedCats.has('STAY') && (
+              <p className="mb-2 rounded-lg bg-sky-50 px-3 py-1.5 text-xs text-sky-900" role="note">
+                ⓘ 반려견 동반 숙소 공식 정보가 아직 적어요. 예약 전 숙소에 꼭 확인하세요.
+              </p>
+            )}
+            {detailMissing && (
+              <p className="mb-2 rounded-lg bg-rose-50 px-3 py-1.5 text-xs text-rose-800" role="alert">
+                링크의 장소를 이 지역 데이터에서 찾을 수 없어요.{' '}
+                <button type="button" onClick={closeDetail} className="underline">
+                  닫기
+                </button>
+              </p>
+            )}
             {regionCodes.length === 0 ? (
               <p className="rounded-2xl bg-white p-4 text-sm text-slate-600 ring-1 ring-slate-200">
                 이 지역은 아직 데이터가 없어요. 지금은 제주 지역만 볼 수 있어요.
@@ -153,7 +173,10 @@ export default function App() {
                     distance={distance}
                     match={match}
                     selected={place.id === selectedId}
-                    onSelect={() => setSelectedId(place.id)}
+                    onSelect={() => {
+                      setSelectedId(place.id)
+                      openDetail(place.id)
+                    }}
                   />
                 ))}
               </ul>
@@ -166,6 +189,15 @@ export default function App() {
           </>
         )}
       </section>
+
+      {detailPlace && (
+        <PlaceDetail
+          place={detailPlace}
+          distance={distanceMeters(center, { lat: detailPlace.latitude, lng: detailPlace.longitude })}
+          match={matchPlace(detailPlace, profile)}
+          onClose={closeDetail}
+        />
+      )}
 
       <ProfileSheet open={profileOpen} profile={profile} onApply={setProfile} onClose={closeProfile} />
     </div>

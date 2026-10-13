@@ -12,7 +12,7 @@ type Props = {
   onSelect: () => void
 }
 
-// 장소 카드. 상세 화면 이동은 STEP 8에서 붙인다.
+// 장소 카드. 누르면 선택(지도 이름표) + 상세 화면
 export function PlaceCard({ place, distance, selected, match, onSelect }: Props) {
   const ref = useRef<HTMLButtonElement>(null)
   const status = petStatusLabel[place.petStatus]
