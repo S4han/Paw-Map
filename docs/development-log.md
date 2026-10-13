@@ -89,3 +89,4 @@
 - iPhone 실기기: 지도가 128km 축척 남쪽 바다·빈 타일로 표시(목록 거리는 정상) → 지도 영역 크기 변화(Safari 주소창 접힘에 따른 dvh 변경) 후 relayout 누락으로 판단, ResizeObserver 로 relayout + 중심 유지 추가(재배포 후 확인 필요)
 
 - 배포 경로 문제: wrangler 가 프로젝트를 만들 때 프로덕션 브랜치를 당시 git 브랜치(`claude/step9-release`)로 잡아 `--branch main` 배포가 모두 Preview 로 들어감 → 기본 주소 "Nothing is here yet". API 로 프로덕션 브랜치를 `main` 으로 변경 후 재배포 → Production 확인(ba77a4a). 배포별 주소(`xxxxxxxx.paw-map-1bi.pages.dev`)는 카카오 미등록이라 지도 안 뜸 → 고정 주소로만 점검
+- 배포 후 점검(사용자, 고정 주소): PC·iPhone 에서 지도(정상 축척·중심), 내 위치, 지역 검색, 매칭, 상세·길찾기, 네이버지도 링크(V-12), 홈 화면 추가, 비행기 모드, 출처 링크 모두 확인 → STEP 9 완료
