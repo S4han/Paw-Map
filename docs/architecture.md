@@ -1,6 +1,6 @@
 # PAW MAP — 아키텍처 및 화면 설계 (STEP 3)
 
-- 문서 버전: v0.1 (제안, 사용자 승인 대기)
+- 문서 버전: v1.0 (A-1 안 A·A-2 카카오맵·A-4 숙소 기본안 승인, 2026-10-13)
 - 작성일: 2026-10-13
 - 입력: `docs/requirements.md` v1.0, `docs/api-analysis.md` v1.0
 - 표기: **[결정 필요]** = 사용자 승인이 있어야 STEP 4로 갈 수 있는 항목
@@ -109,6 +109,7 @@ interface Evidence {
   source: SourceId
   sourceId?: string          // 관광공사 contentid / 식약처는 자체 키(정규화 이름+주소 해시)
   type: EvidenceType
+  petStatus: PetStatus       // 이 출처가 말하는 동반 여부(최종 상태 판정 입력, STEP 4에서 추가)
   checkedAt?: string         // 출처가 준 수정·확인일(관광공사 modifiedtime). 식약처는 없음
   fetchedAt: string          // 가공 파이프라인이 받은 시각
   url?: string

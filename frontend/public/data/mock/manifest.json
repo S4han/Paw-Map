@@ -1,0 +1,26 @@
+{
+ "version": "mock-20261013",
+ "generatedAt": "2026-10-13T00:00:00+09:00",
+ "isMock": true,
+ "sources": [
+  {
+   "source": "MOCK",
+   "fetchedAt": "2026-10-13T00:00:00+09:00",
+   "note": "가상 데이터 — 실제 장소가 아님"
+  }
+ ],
+ "regions": [
+  {
+   "code": "50",
+   "name": "제주",
+   "file": "places.50.json",
+   "count": 9,
+   "bbox": [
+    33.1,
+    126.1,
+    33.6,
+    127.0
+   ]
+  }
+ ]
+}
