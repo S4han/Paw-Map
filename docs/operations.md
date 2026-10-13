@@ -54,7 +54,14 @@ npx --yes wrangler@4 pages deploy dist --project-name paw-map --branch main
 - `public/data/live/`는 커밋하지 않지만 빌드 결과(`dist/`)에는 들어가 업로드된다 → **공개 범위(§1)를 정한 뒤에만** 실행한다.
 - 업로드 출력의 `https://<8자리>.paw-map-1bi.pages.dev` 는 **배포마다 새로 생기는 미리보기 주소**라 카카오 도메인에 등록되어 있지 않아 지도가 뜨지 않는다(2026-10-13 확인). 점검·공유는 항상 고정 주소 `https://paw-map-1bi.pages.dev` 로 한다. 배포마다 주소를 카카오에 추가하지 않는다.
 - 새 프로젝트·새 주소는 HTTPS 인증서 발급에 수 분~수십 분이 걸려 그동안 `ERR_SSL_VERSION_OR_CIPHER_MISMATCH` 가 날 수 있다(2026-10-13 발생) → 기다렸다가 다시 접속.
-- `--branch` 가 프로젝트의 **프로덕션 브랜치**와 같아야 기본 주소(`프로젝트.pages.dev`)에 반영된다. 다르면 미리보기 주소(`브랜치.프로젝트.pages.dev`)로만 올라간다 → Pages 프로젝트 Settings 에서 프로덕션 브랜치 확인.
+- `--branch` 가 프로젝트의 **프로덕션 브랜치**와 같아야 기본 주소(`프로젝트.pages.dev`)에 반영된다. 다르면 미리보기(`Preview`)로만 올라가 기본 주소는 "Nothing is here yet" 이 된다. wrangler 가 프로젝트를 처음 만들 때 **그때의 git 브랜치 이름**을 프로덕션 브랜치로 잡는다(2026-10-13: `claude/step9-release` 로 잡혀 있었음 → `main` 으로 변경).
+  ```bash
+  # 확인
+  curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/paw-map" | python3 -c "import sys,json; print(json.load(sys.stdin)['result']['production_branch'])"
+  # main 으로 변경
+  curl -s -X PATCH -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" -d '{"production_branch":"main"}' "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/paw-map" | python3 -c "import sys,json; r=json.load(sys.stdin); print(r['success'], r['result']['production_branch'] if r['success'] else r['errors'])"
+  ```
+  배포 목록의 `Environment` 가 `Production` 인지로 확인: `npx --yes wrangler@4 pages deployment list --project-name paw-map`
 
 ---
 
