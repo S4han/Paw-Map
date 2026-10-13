@@ -27,8 +27,15 @@ def read_rows(path: Path) -> list[list[str]]:
         import openpyxl  # type: ignore[import-not-found]
     except ImportError:
         sys.exit("xlsx 를 읽으려면 'pip install openpyxl' 이 필요합니다. 또는 Excel에서 CSV UTF-8로 저장해 주세요.")
-    ws = openpyxl.load_workbook(path, read_only=True, data_only=True).active
-    return [["" if c is None else str(c) for c in row] for row in ws.iter_rows(values_only=True)]
+    # read_only 모드는 파일에 기록된 시트 크기(dimension)만 믿는데, 식품안전나라 파일은 이 값이 'A1'로
+    # 잘못 들어 있는 것으로 보인다(2026-10-13, read_only로 읽으면 '연번' 한 칸만 나옴). 일반 모드로 읽고, 시트가 여러 개면 가장 큰 시트를 쓴다.
+    wb = openpyxl.load_workbook(path, data_only=True)
+    sheets = {
+        ws.title: [["" if c is None else str(c) for c in row] for row in ws.iter_rows(values_only=True)]
+        for ws in wb.worksheets
+    }
+    print(f"시트: { {name: len(rows) for name, rows in sheets.items()} }")
+    return max(sheets.values(), key=len)
 
 
 def find_header(rows: list[list[str]]) -> int:
@@ -50,6 +57,8 @@ def main() -> None:
     data = [r for r in rows[h + 1 :] if any(c.strip() for c in r)]
     print(f"머리글({h + 1}번째 줄): {header}")
     print(f"데이터 {len(data)}행")
+    for r in data[:3]:  # 공개된 업소 목록이라 앞 3행만 구조 확인용으로 출력
+        print(f"  예시: {[c[:30] for c in r]}")
 
     def col(*names: str) -> int | None:
         for i, name in enumerate(header):
