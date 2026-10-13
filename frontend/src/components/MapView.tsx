@@ -62,7 +62,27 @@ export function MapView({ searchCenter, myLocation, radius, places, selectedId, 
           setOfferSearchHere(shouldOfferSearchHere(latest.current.searchCenter, center, latest.current.radius))
         })
         clustererRef.current = kakao.maps.MarkerClusterer
-          ? new kakao.maps.MarkerClusterer({ map: m, averageCenter: true, minLevel: 6, gridSize: 60 })
+          ? new kakao.maps.MarkerClusterer({
+              map: m,
+              averageCenter: true,
+              minLevel: 6,
+              gridSize: 60,
+              // 기본 파란 묶음은 기준점과 겹치면 숫자가 가려져 주황 원·흰 숫자로 바꾼다
+              styles: [
+                {
+                  width: '40px',
+                  height: '40px',
+                  background: 'rgba(234, 88, 12, 0.9)',
+                  border: '2px solid #fff',
+                  borderRadius: '9999px',
+                  color: '#fff',
+                  textAlign: 'center',
+                  fontWeight: '700',
+                  lineHeight: '36px',
+                  boxShadow: '0 1px 4px rgba(0,0,0,.35)',
+                },
+              ],
+            })
           : null
         setMap(m)
       })
@@ -90,7 +110,7 @@ export function MapView({ searchCenter, myLocation, radius, places, selectedId, 
       fillOpacity: 0.06,
     })
     centerDotRef.current?.setMap(null)
-    centerDotRef.current = new kakao.maps.CustomOverlay({ map, position: center, content: dot('#f97316', '검색 기준점'), zIndex: 3 })
+    centerDotRef.current = new kakao.maps.CustomOverlay({ map, position: center, content: dot('#334155', '검색 기준점'), zIndex: 0 })
 
     // 반경 원에 맞추면 지도 중심 = 기준점이 되어 "이 지역 검색" 판단 기준이 단순해진다
     const dLat = radius / M_PER_DEG_LAT
@@ -110,7 +130,7 @@ export function MapView({ searchCenter, myLocation, radius, places, selectedId, 
     if (!kakao || !map) return
     myDotRef.current?.setMap(null)
     myDotRef.current = myLocation
-      ? new kakao.maps.CustomOverlay({ map, position: new kakao.maps.LatLng(myLocation.lat, myLocation.lng), content: dot('#2563eb', '내 위치'), zIndex: 4 })
+      ? new kakao.maps.CustomOverlay({ map, position: new kakao.maps.LatLng(myLocation.lat, myLocation.lng), content: dot('#2563eb', '내 위치'), zIndex: 1 })
       : null
   }, [map, myLocation])
 
