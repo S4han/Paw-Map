@@ -46,9 +46,11 @@ VITE_DATASET_BASE=/data/live npm run build
 npm run check:secrets
 
 # 3) 업로드(Direct Upload)
-npx wrangler pages deploy dist --project-name paw-map --branch main
+npx --yes wrangler@4 pages deploy dist --project-name paw-map --branch main
 ```
 
+- **한 블록씩 실행하고, 앞 단계가 실패하면 다음 단계로 가지 않는다.** 여러 줄을 한꺼번에 붙여넣으면 뒤 명령이 앞 명령의 질문(y/n)에 입력되어 엉뚱하게 취소·진행될 수 있다(2026-10-13 발생).
+- 새 코드스페이스에는 `ingest/input/` 의 식약처 xlsx 가 없다(커밋하지 않는 파일) → 다시 올린 뒤 가공한다.
 - `public/data/live/`는 커밋하지 않지만 빌드 결과(`dist/`)에는 들어가 업로드된다 → **공개 범위(§1)를 정한 뒤에만** 실행한다.
 - 업로드 후 출력되는 주소로 접속해 §4 점검표를 확인한다.
 
