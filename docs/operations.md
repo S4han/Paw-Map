@@ -27,7 +27,7 @@
 1. Cloudflare 가입 → **Workers & Pages → Create → Pages → Direct Upload** 로 프로젝트 `paw-map` 생성(빈 폴더 업로드 없이 이름만 만들어도 됨).
 2. Cloudflare **API 토큰** 생성: My Profile → API Tokens → Create Token → "Edit Cloudflare Workers" 템플릿 또는 사용자 지정(권한: Account · Cloudflare Pages · Edit). 
 3. GitHub 저장소 Settings → Secrets → **Codespaces** 에 `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`(Cloudflare 대시보드 오른쪽의 Account ID), `VITE_KAKAO_JS_KEY` 등록 → 코드스페이스 재시작.
-4. 카카오 콘솔 → 앱 → 플랫폼 키 → JavaScript SDK 도메인에 `https://paw-map.pages.dev` 추가.
+4. 카카오 콘솔 → 앱 → 플랫폼 키 → JavaScript SDK 도메인에 **실제 배포 주소** 추가. `pages.dev` 이름은 전 세계에서 하나라 이미 쓰인 경우 뒤에 문자가 붙는다(실제: `https://paw-map-1bi.pages.dev`, 2026-10-13). 첫 배포 출력·Pages 프로젝트 화면의 주소를 그대로 등록한다.
 5. (안 C) Cloudflare Zero Trust → Access → Applications → Self-hosted → 도메인 `paw-map.pages.dev`, 정책: 본인 이메일만 Allow.
 
 ### 2.2 배포 명령
@@ -53,6 +53,8 @@ npx --yes wrangler@4 pages deploy dist --project-name paw-map --branch main
 - 새 코드스페이스에는 `ingest/input/` 의 식약처 xlsx 가 없다(커밋하지 않는 파일) → 다시 올린 뒤 가공한다.
 - `public/data/live/`는 커밋하지 않지만 빌드 결과(`dist/`)에는 들어가 업로드된다 → **공개 범위(§1)를 정한 뒤에만** 실행한다.
 - 업로드 후 출력되는 주소로 접속해 §4 점검표를 확인한다.
+- 새 프로젝트·새 주소는 HTTPS 인증서 발급에 수 분~수십 분이 걸려 그동안 `ERR_SSL_VERSION_OR_CIPHER_MISMATCH` 가 날 수 있다(2026-10-13 발생) → 기다렸다가 다시 접속.
+- `--branch` 가 프로젝트의 **프로덕션 브랜치**와 같아야 기본 주소(`프로젝트.pages.dev`)에 반영된다. 다르면 미리보기 주소(`브랜치.프로젝트.pages.dev`)로만 올라간다 → Pages 프로젝트 Settings 에서 프로덕션 브랜치 확인.
 
 ---
 
