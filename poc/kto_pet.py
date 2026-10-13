@@ -7,7 +7,7 @@
 
 실행: DATA_GO_KR_SERVICE_KEY 환경변수 설정 후
   python poc/kto_pet.py --details 30
-예상 호출 수: 약 12 + 제주 목록 페이지 수(100건당 1회) + --details 값 (개발계정 일 1,000건 한도로 보고됨 — 미검증)
+예상 호출 수: 약 12 + 제주 목록 페이지 수(100건당 1회) + --details 값 + 전국·시도 조사 약 57회 (개발계정 일 1,000건 한도로 보고됨 — 미검증)
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import time
 import urllib.parse
 from collections import Counter
 from typing import Any
@@ -23,6 +24,11 @@ from common import env_key, http_get, mask, now_iso, save
 
 BASE = "https://apis.data.go.kr/B551011/KorPetTourService2"
 JEJU_CITY_HALL = (33.4996, 126.5312)  # (위도, 경도)
+# 법정동 시도 코드(lDongRegnCd) — 초기 검증 지역 재검토용
+SIDO = {
+    "11": "서울", "26": "부산", "27": "대구", "28": "인천", "29": "광주", "30": "대전", "31": "울산", "36": "세종",
+    "41": "경기", "43": "충북", "44": "충남", "46": "전남", "47": "경북", "48": "경남", "50": "제주", "51": "강원", "52": "전북",
+}
 CONTENT_TYPES = {"12": "관광지", "14": "문화시설", "28": "레포츠", "32": "숙박", "38": "쇼핑", "39": "음식점"}
 
 calls = 0
@@ -35,7 +41,13 @@ def request(op: str, key: str, **params: Any) -> dict[str, Any]:
     # '디코딩' 키는 URL 인코딩이 필요하고 '인코딩' 키는 이미 인코딩돼 있다. 둘 다 받도록 처리.
     encoded_key = key if "%" in key else urllib.parse.quote(key, safe="")
     query = urllib.parse.urlencode({"MobileOS": "ETC", "MobileApp": "PawMapPoC", "_type": "json", **params})
-    status, text = http_get(f"{BASE}/{op}?serviceKey={encoded_key}&{query}")
+    url = f"{BASE}/{op}?serviceKey={encoded_key}&{query}"
+    for attempt in range(3):  # 연결 실패(SSL 핸드셰이크 시간 초과 등)는 2초·4초 쉬고 재시도
+        status, text = http_get(url)
+        if status != 0:
+            break
+        print(f"  (연결 실패, {2 ** (attempt + 1)}초 후 재시도: {mask(text, key)[:80]})")
+        time.sleep(2 ** (attempt + 1))
     if status == 0:
         raise SystemExit(f"[중단] {mask(text, key)} — 네트워크·방화벽을 확인하세요.")
     result: dict[str, Any] = {"op": op, "params": params, "http": status, "items": []}
@@ -113,6 +125,7 @@ def stratified(items: list[dict[str, Any]], n: int) -> list[dict[str, Any]]:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--details", type=int, default=30, help="detailPetTour2 를 호출할 샘플 수")
+    parser.add_argument("--skip-survey", action="store_true", help="전국·시도별 건수 조사 생략(약 40회 호출 절약)")
     args = parser.parse_args()
     key = env_key("DATA_GO_KR_SERVICE_KEY")
     lat, lng = JEJU_CITY_HALL
@@ -123,6 +136,23 @@ def main() -> None:
         r = request("areaBasedList2", key, numOfRows=1, pageNo=1, **params)
         print(f"  {label}: {summarize(r)}")
         report["checks"][f"area:{label}"] = {k: v for k, v in r.items() if k != "items"}
+
+    if not args.skip_survey:
+        print("== V-2 전국 콘텐츠 유형별 건수(지역 조건 없음)")
+        for type_id, name in CONTENT_TYPES.items():
+            r = request("areaBasedList2", key, numOfRows=1, pageNo=1, contentTypeId=type_id)
+            print(f"  {type_id} {name}: {r.get('totalCount')}")
+            report["checks"][f"national:{type_id}"] = r.get("totalCount")
+        print("== V-2 시도별 숙박(32)·음식점(39)·관광지(12) 건수(lDongRegnCd)")
+        survey = {}
+        for code, name in SIDO.items():
+            counts = {}
+            for type_id in ("32", "39", "12"):
+                r = request("areaBasedList2", key, numOfRows=1, pageNo=1, lDongRegnCd=code, contentTypeId=type_id)
+                counts[type_id] = r.get("totalCount")
+            survey[name] = counts
+            print(f"  {name}({code}): 숙박 {counts['32']} / 음식점 {counts['39']} / 관광지 {counts['12']}")
+        report["sidoSurvey"] = survey
 
     print("== V-1/V-2/V-6 제주 전체 목록(lDongRegnCd=50) 수집")
     items = fetch_all(key, lDongRegnCd="50")

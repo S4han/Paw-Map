@@ -25,4 +25,6 @@
 - 관광공사 상세 필드: `acmpyTypeCd`, `acmpyPsblCpam`, `acmpyNeedMtr`, `etcAcmpyInfo` 확인
 - Google: 기존 키가 HTTP 리퍼러 제한 키라 403 → PoC 전용 키 생성 안내(재실행 대기)
 - 식약처 파일: 2,813곳, 제주 103곳, 열 5개(식별자·좌표·날짜 없음). xlsx 시트 크기 정보 오류로 읽기 방식 수정
+- 관광공사 2차 실측: 위치기반 검색이 구 지역코드 보유 22건만 찾는 것 확정(제주시청 3km 직접 계산 91건 vs API 0건). 제주 숙박 2·음식점 1건뿐. 상세 단계에서 SSL 시간 초과로 중단 → 재시도 추가, 전국·시도별 건수 조사 추가
+- Google: 키 끝 `NBTM`이 여전히 리퍼러 제한(`API_KEY_HTTP_REFERRER_BLOCKED`) → 키 교체 확인 요청
 
