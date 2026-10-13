@@ -29,6 +29,23 @@ python poc/mfds_pet_restaurants.py "$HOME\Downloads\받은파일.xlsx"   # 먼�
 
 macOS/Linux는 `$env:X = "..."` 대신 `export X="..."`를 사용합니다.
 
+## 실행 (GitHub Codespaces)
+
+1. 저장소 **Settings → Secrets and variables → Codespaces → New repository secret**으로 `DATA_GO_KR_SERVICE_KEY`, `GOOGLE_PLACES_API_KEY` 등록(코드스페이스를 만든 뒤 등록했다면 코드스페이스를 다시 시작해야 반영됨)
+2. 저장소 → 브랜치 `claude/step2-api-poc` 선택 → **Code → Codespaces → Create codespace**
+3. 터미널(bash)에서:
+
+```bash
+python3 poc/kto_pet.py --details 30
+python3 poc/google_places.py "$(ls -t poc/out/kto_pet-*.json | head -1)" --limit 20
+
+# 식약처: PC·휴대폰 브라우저로 Excel을 받아 코드스페이스 왼쪽 탐색기로 끌어다 놓은 뒤
+pip install openpyxl
+python3 poc/mfds_pet_restaurants.py 받은파일.xlsx
+```
+
+4. 다 쓰면 코드스페이스를 **Stop** (무료 사용 시간·저장공간 초과 시 과금될 수 있음)
+
 ## 비용
 
 | 스크립트 | 호출 | 예상 비용 |
