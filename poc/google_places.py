@@ -75,6 +75,12 @@ def main() -> None:
         row: dict[str, Any] = {"title": place["title"], "contenttypeid": place.get("contenttypeid")}
         if status == 0:
             raise SystemExit(f"[중단] {text} — 네트워크·방화벽을 확인하세요.")
+        if status in (401, 403):
+            raise SystemExit(
+                f"[중단] 키 거부(http={status}): {mask(text[:300], key)}\n"
+                f"  지금 쓰는 키 끝 4자리: ...{key[-4:]} — Cloud 콘솔의 PoC용 키와 같은지,"
+                " 애플리케이션 제한 '없음'·API 제한 'Places API (New)'인지 확인하세요."
+            )
         if status != 200:
             row["error"] = f"textSearch http={status} {mask(text[:200], key)}"
             rows.append(row)

@@ -187,7 +187,8 @@ def main() -> None:
     # google_places.py 가 매칭 검증(V-8, V-10)에 쓰는 입력
     report["listSample"] = [
         {k: i.get(k) for k in ("contentid", "contenttypeid", "title", "addr1", "tel", "mapx", "mapy")}
-        for i in stratified(items, 40)
+        # PAW MAP 카테고리 후보(관광지·문화시설·레포츠·숙박·음식점)만. 쇼핑(38) 등은 제외
+        for i in stratified([i for i in items if str(i.get("contenttypeid")) in {"12", "14", "28", "32", "39"}], 40)
     ]
     report["callsUsed"] = calls
     path = save("kto_pet", report)
