@@ -111,6 +111,9 @@ def main() -> None:
         )
         rows.append(row)
 
+    for r in rows:
+        if "error" in r:
+            print(f"  [오류] {r['title']}: {r['error'][:300]}")
     allows = Counter(str(r.get("allowsDogs")) for r in rows if "googleName" in r)
     report = {
         "runAt": now_iso(),

@@ -7,13 +7,14 @@
 
 실행: DATA_GO_KR_SERVICE_KEY 환경변수 설정 후
   python poc/kto_pet.py --details 30
-예상 호출 수: 약 15 + --details 값 (개발계정 일 1,000건 한도로 보고됨 — 미검증)
+예상 호출 수: 약 12 + 제주 목록 페이지 수(100건당 1회) + --details 값 (개발계정 일 1,000건 한도로 보고됨 — 미검증)
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import math
 import urllib.parse
 from collections import Counter
 from typing import Any
@@ -71,6 +72,44 @@ def summarize(r: dict[str, Any]) -> str:
     return f"totalCount={r['totalCount']} 받은 항목={len(r['items'])}"
 
 
+def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    r = 6_371_000
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp, dl = p2 - p1, math.radians(lng2 - lng1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(a))
+
+
+def fetch_all(key: str, **params: Any) -> list[dict[str, Any]]:
+    """areaBasedList2 를 100건씩 끝까지 받는다."""
+    items: list[dict[str, Any]] = []
+    page = 1
+    while True:
+        r = request("areaBasedList2", key, numOfRows=100, pageNo=page, **params)
+        if r.get("resultCode") not in (None, "0000") or "error" in r:
+            print(f"  페이지 {page} {summarize(r)}")
+            break
+        items += r["items"]
+        if not r["items"] or len(items) >= int(r["totalCount"] or 0):
+            break
+        page += 1
+    return items
+
+
+def stratified(items: list[dict[str, Any]], n: int) -> list[dict[str, Any]]:
+    """콘텐츠 유형별로 골고루 n건을 고른다(음식점·숙박 우선)."""
+    by_type: dict[str, list[dict[str, Any]]] = {}
+    for i in items:
+        by_type.setdefault(str(i.get("contenttypeid")), []).append(i)
+    order = sorted(by_type, key=lambda t: {"39": 0, "32": 1, "12": 2}.get(t, 3))
+    picked: list[dict[str, Any]] = []
+    while len(picked) < n and any(by_type.values()):
+        for t in order:
+            if by_type[t] and len(picked) < n:
+                picked.append(by_type[t].pop(0))
+    return picked
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--details", type=int, default=30, help="detailPetTour2 를 호출할 샘플 수")
@@ -84,45 +123,45 @@ def main() -> None:
         r = request("areaBasedList2", key, numOfRows=1, pageNo=1, **params)
         print(f"  {label}: {summarize(r)}")
         report["checks"][f"area:{label}"] = {k: v for k, v in r.items() if k != "items"}
-        if r["items"]:
-            report["checks"][f"area:{label}"]["itemKeys"] = sorted(r["items"][0].keys())
 
-    print("== V-2 콘텐츠 유형별 건수(areaCode=39)")
-    for type_id, name in CONTENT_TYPES.items():
-        r = request("areaBasedList2", key, numOfRows=1, pageNo=1, areaCode="39", contentTypeId=type_id)
-        print(f"  {type_id} {name}: {summarize(r)}")
-        report["checks"][f"type:{type_id}"] = {k: v for k, v in r.items() if k != "items"}
-
-    print("== V-3 위치기반 반경(제주시청 기준, 거리순 arrange=E)")
-    for radius in (1000, 3000, 5000, 10000, 20000, 50000):
-        r = request("locationBasedList2", key, numOfRows=5, pageNo=1, mapX=lng, mapY=lat, radius=radius, arrange="E")
-        print(f"  radius={radius}: {summarize(r)}")
-        entry = {k: v for k, v in r.items() if k != "items"}
-        entry["first"] = [{k: i.get(k) for k in ("title", "contenttypeid", "dist")} for i in r["items"]]
-        report["checks"][f"radius:{radius}"] = entry
-
-    print("== V-1/V-6 목록 샘플 필드(위치기반 10km, 100건)")
-    sample = request("locationBasedList2", key, numOfRows=100, pageNo=1, mapX=lng, mapY=lat, radius=10000, arrange="E")
-    print(f"  {summarize(sample)}")
-    items = sample["items"]
+    print("== V-1/V-2/V-6 제주 전체 목록(lDongRegnCd=50) 수집")
+    items = fetch_all(key, lDongRegnCd="50")
+    print(f"  받은 항목 {len(items)}건")
     key_counter: Counter[str] = Counter(k for i in items for k, v in i.items() if v not in (None, ""))
     report["listFieldFillRate"] = {k: f"{c}/{len(items)}" for k, c in key_counter.most_common()}
-    for field in ("contenttypeid", "cat1", "cat2", "cat3", "lclsSystm1", "lclsSystm2", "lclsSystm3", "cpyrhtDivCd"):
-        values = Counter(str(i.get(field)) for i in items if i.get(field) not in (None, ""))
-        if values:
-            report.setdefault("listFieldValues", {})[field] = dict(values.most_common(30))
     print(f"  필드 채움: {report['listFieldFillRate']}")
-    # google_places.py 가 매칭 검증(V-8, V-10)에 쓰는 입력
-    report["listSample"] = [
-        {k: i.get(k) for k in ("contentid", "contenttypeid", "title", "addr1", "tel", "mapx", "mapy")} for i in items
-    ]
+    for field in ("contenttypeid", "areacode", "cat3", "lclsSystm1", "lclsSystm2", "lclsSystm3", "cpyrhtDivCd"):
+        values = Counter(str(i.get(field) or "(빈값)") for i in items)
+        report.setdefault("listFieldValues", {})[field] = dict(values.most_common(40))
+        print(f"  {field}: {dict(values.most_common(15))}")
 
-    print(f"== V-4/V-5 detailPetTour2 샘플 {args.details}건")
+    print("== V-3 위치기반 검색 누락 여부: 직접 계산한 거리 vs locationBasedList2(제주시청 기준)")
+    dists = [
+        haversine_m(lat, lng, float(i["mapy"]), float(i["mapx"]))
+        for i in items
+        if i.get("mapx") and i.get("mapy")
+    ]
+    report["noCoordinates"] = len(items) - len(dists)
+    for radius in (1000, 3000, 5000, 10000, 20000, 50000):
+        r = request("locationBasedList2", key, numOfRows=5, pageNo=1, mapX=lng, mapY=lat, radius=radius, arrange="E")
+        expected = sum(1 for d in dists if d <= radius)
+        print(f"  radius={radius}: 직접 계산 {expected}건 / API {summarize(r)}")
+        report["checks"][f"radius:{radius}"] = {"expected": expected, **{k: v for k, v in r.items() if k != "items"}}
+
+    if items and items[0].get("mapx"):
+        probe = items[0]
+        r = request("locationBasedList2", key, numOfRows=5, pageNo=1, mapX=probe["mapx"], mapY=probe["mapy"], radius=500, arrange="E")
+        hit = any(i.get("contentid") == probe.get("contentid") for i in r["items"])
+        print(f"  탐침: '{probe.get('title')}' 좌표 반경 500m → {summarize(r)}, 자기 자신 포함={hit}")
+        report["checks"]["probe"] = {"title": probe.get("title"), "found": hit, "totalCount": r.get("totalCount")}
+
+    sample = stratified(items, args.details)
+    print(f"== V-4/V-5 detailPetTour2 샘플 {len(sample)}건(유형별 고르게)")
     detail_counter: Counter[str] = Counter()
     empty = 0
     acmpy_types: Counter[str] = Counter()
     examples = []
-    for item in items[: args.details]:
+    for item in sample:
         r = request("detailPetTour2", key, contentId=item.get("contentid"))
         if not r["items"]:
             empty += 1
@@ -130,9 +169,8 @@ def main() -> None:
         d = r["items"][0]
         detail_counter.update(k for k, v in d.items() if v not in (None, ""))
         acmpy_types[str(d.get("acmpyTypeCd"))] += 1
-        if len(examples) < 10:
-            examples.append({"title": item.get("title"), "contenttypeid": item.get("contenttypeid"), **d})
-    n = min(args.details, len(items))
+        examples.append({"title": item.get("title"), "contenttypeid": item.get("contenttypeid"), **d})
+    n = len(sample)
     report["detail"] = {
         "sampled": n,
         "emptyResponses": empty,
@@ -142,11 +180,19 @@ def main() -> None:
     }
     print(f"  빈 응답 {empty}/{n}, 필드 채움: {report['detail']['fieldFillRate']}")
     print(f"  acmpyTypeCd 값: {dict(acmpy_types)}")
+    for e in examples[:6]:
+        brief = {k: str(v)[:60] for k, v in e.items() if k.startswith(("acmpy", "etc")) and v}
+        print(f"  예시 [{e['contenttypeid']}] {e['title']}: {brief}")
 
+    # google_places.py 가 매칭 검증(V-8, V-10)에 쓰는 입력
+    report["listSample"] = [
+        {k: i.get(k) for k in ("contentid", "contenttypeid", "title", "addr1", "tel", "mapx", "mapy")}
+        for i in stratified(items, 40)
+    ]
     report["callsUsed"] = calls
     path = save("kto_pet", report)
     print(f"\n호출 {calls}회. 결과 저장: {path}")
-    print("이 파일은 커밋하지 마세요(이용조건 확인 전). 요약만 공유하면 됩니다.")
+    print("이 파일은 커밋하지 마세요(이용조건 확인 전). 터미널 출력만 공유하면 됩니다.")
 
 
 if __name__ == "__main__":
