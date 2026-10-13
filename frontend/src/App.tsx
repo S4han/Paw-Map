@@ -109,6 +109,11 @@ export default function App() {
           🧪 가상(Mock) 데이터로 보여주는 개발용 화면이에요. 실제 장소가 아닙니다.
         </p>
       )}
+      {geo.status === 'locating' && (
+        <p className="mx-4 mb-2 rounded-lg bg-sky-50 px-3 py-1.5 text-xs text-sky-900" role="status">
+          📍 현재 위치를 확인하고 있어요. 위치 허용 창이 뜨면 &lsquo;허용&rsquo;을 눌러 주세요
+        </p>
+      )}
       {geo.status === 'error' && (
         <p className="mx-4 mb-2 rounded-lg bg-sky-50 px-3 py-1.5 text-xs text-sky-900" role="status">
           📍 {geo.message}
