@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FilterBar } from './components/FilterBar'
 import { sourceLabel, sourceLink } from './components/labels'
 import { MapView } from './components/MapView'
@@ -63,6 +63,7 @@ export default function App() {
   const detailPlace = placeId && placesState.status === 'ready' ? placesState.places.find((p) => p.id === placeId) : undefined
   const detailMissing = Boolean(placeId) && placesState.status === 'ready' && !detailPlace
 
+  const movedByUser = useRef(false) // 지역 검색·"이 지역 검색"으로 옮긴 뒤에는 자동 위치로 덮어쓰지 않는다
   const moveTo = useCallback((next: SearchCenter) => {
     setCenter(next)
     setSelectedId(undefined)
@@ -70,11 +71,32 @@ export default function App() {
   }, [])
 
   const onLocate = async () => {
+    movedByUser.current = false
     const pos = await locate()
-    if (pos) moveTo({ ...pos, label: '내 위치' })
+    if (pos && !movedByUser.current) moveTo({ ...pos, label: '내 위치' })
   }
-  const onPick = (c: SearchCandidate) => moveTo({ lat: c.lat, lng: c.lng, label: c.name })
-  const onSearchHere = useCallback((c: LatLng) => moveTo({ ...c, label: '지도에서 선택한 지역' }), [moveTo])
+  const onPick = (c: SearchCandidate) => {
+    movedByUser.current = true
+    moveTo({ lat: c.lat, lng: c.lng, label: c.name })
+  }
+  const onSearchHere = useCallback(
+    (c: LatLng) => {
+      movedByUser.current = true
+      moveTo({ ...c, label: '지도에서 선택한 지역' })
+    },
+    [moveTo],
+  )
+
+  // 앱을 열면 현재 위치를 자동으로 요청해 기준점으로 쓴다(AC-04-1a). 실패하면 기본 위치 + 안내
+  useEffect(() => {
+    let cancelled = false
+    locate().then((pos) => {
+      if (!cancelled && pos && !movedByUser.current) moveTo({ ...pos, label: '내 위치' })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [locate, moveTo])
 
   const toggleCategory = (c: Category) =>
     setSelectedCats((prev) => {
@@ -117,6 +139,7 @@ export default function App() {
       {geo.status === 'error' && (
         <p className="mx-4 mb-2 rounded-lg bg-sky-50 px-3 py-1.5 text-xs text-sky-900" role="status">
           📍 {geo.message}
+          {geo.detail && <span className="text-sky-700/70"> ({geo.detail})</span>}
         </p>
       )}
 

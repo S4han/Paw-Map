@@ -8,15 +8,16 @@ type GeoState =
   | { status: 'idle' }
   | { status: 'locating' }
   | { status: 'ok'; position: LatLng; accuracy: number }
-  | { status: 'error'; failure: GeoFailure; message: string }
+  | { status: 'error'; failure: GeoFailure; message: string; detail?: string }
 
-// 위치 권한은 사용자가 버튼을 눌렀을 때만 요청한다(요구사항 FR-001). 좌표는 이 기기 밖으로 보내지 않는다.
+// 앱을 열 때와 ◎ 버튼을 눌렀을 때 위치를 요청한다(요구사항 AC-04-1, AC-04-1a). 좌표는 이 기기 밖으로 보내지 않는다.
 export function useGeolocation() {
   const [state, setState] = useState<GeoState>({ status: 'idle' })
 
   const locate = useCallback((): Promise<LatLng | null> => {
-    const fail = (failure: GeoFailure) => {
-      setState({ status: 'error', failure, message: geoFailureMessage(failure) })
+    // detail: 브라우저가 준 오류 코드(실기기 문제를 사용자 캡처로 진단하기 위해 함께 표시)
+    const fail = (failure: GeoFailure, detail?: string) => {
+      setState({ status: 'error', failure, message: geoFailureMessage(failure), detail })
       return null
     }
     if (!window.isSecureContext) return Promise.resolve(fail('insecure'))
@@ -33,7 +34,7 @@ export function useGeolocation() {
         clearTimeout(watchdog)
         resolve(value)
       }
-      const watchdog = setTimeout(() => settle(fail('timeout')), GEO_WATCHDOG_MS)
+      const watchdog = setTimeout(() => settle(fail('timeout', '응답 없음')), GEO_WATCHDOG_MS)
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           if (settled) return
@@ -41,7 +42,7 @@ export function useGeolocation() {
           setState({ status: 'ok', position, accuracy: pos.coords.accuracy })
           settle(position)
         },
-        (err) => !settled && settle(fail(geoFailureFromCode(err.code))),
+        (err) => !settled && settle(fail(geoFailureFromCode(err.code), `코드 ${err.code}`)),
         { enableHighAccuracy: false, timeout: 10_000, maximumAge: 60_000 },
       )
     })

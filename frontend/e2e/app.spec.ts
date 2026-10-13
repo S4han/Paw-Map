@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 // 가상 데이터(제주시청 기준 반경 3km): 동반 가능 6곳, 미확인 2곳(충돌 1), 동반 불가 1곳
+// 위치 권한이 없는 기본 상태에서는 앱 시작 때의 자동 위치 요청이 거부되어 제주시청 기준으로 남는다
 const summary = (page: Page) => page.getByText(/기준 · \d+곳 · 거리순/)
 
 test.beforeEach(async ({ page }) => {
@@ -81,4 +82,13 @@ test('위치 권한이 없어도 안내 후 계속 사용 가능', async ({ page
   await page.getByRole('button', { name: '현재 위치로 찾기' }).click()
   await expect(page.getByText(/지역 검색으로도 이용할 수 있어요/)).toBeVisible()
   await expect(summary(page)).toContainText('6곳')
+})
+
+test.describe('위치 권한 허용', () => {
+  test.use({ permissions: ['geolocation'], geolocation: { latitude: 33.4996, longitude: 126.5312 } })
+
+  test('앱을 열면 내 위치를 기준으로 검색', async ({ page }) => {
+    await expect(summary(page)).toContainText('내 위치')
+    await expect(page.getByText(/위치 권한이 꺼져 있어요/)).toHaveCount(0)
+  })
 })
