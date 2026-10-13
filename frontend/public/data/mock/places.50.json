@@ -316,6 +316,32 @@
    ],
    "conflictingEvidence": false,
    "lastVerifiedAt": "2026-04-02"
+  },
+  {
+   "id": "mock:10",
+   "name": "(가상) 골목카페",
+   "category": "CAFE",
+   "latitude": 33.5014,
+   "longitude": 126.5293,
+   "address": "제주특별자치도 제주시 가상로 10",
+   "petStatus": "ALLOWED",
+   "petConditions": {
+    "notes": [
+     "멍카페 바로 옆 — 마커 묶음 확인용"
+    ],
+    "fieldSources": {},
+    "conflicts": []
+   },
+   "evidence": [
+    {
+     "source": "MOCK",
+     "type": "OFFICIAL",
+     "petStatus": "ALLOWED",
+     "fetchedAt": "2026-10-13T00:00:00+09:00",
+     "claim": "식약처 반려동물 동반출입 음식점 등록 (가상)"
+    }
+   ],
+   "conflictingEvidence": false
   }
  ]
 }

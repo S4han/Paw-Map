@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { formatDistance } from '../domain/distance'
 import type { PetPlace } from '../types/place'
 import { categoryLabel, petStatusLabel, sourceLabel } from './labels'
@@ -11,13 +12,20 @@ type Props = {
 
 // 장소 카드. 프로필 매칭 배지·사유는 STEP 7, 상세 화면 이동은 STEP 8에서 붙인다.
 export function PlaceCard({ place, distance, selected, onSelect }: Props) {
+  const ref = useRef<HTMLButtonElement>(null)
   const status = petStatusLabel[place.petStatus]
   const main = place.evidence[0]
   const date = place.lastVerifiedAt ? `확인 ${place.lastVerifiedAt}` : '확인일 정보 없음'
 
+  // 지도 마커로 선택되면 목록에서 해당 카드를 보이게 한다
+  useEffect(() => {
+    if (selected) ref.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [selected])
+
   return (
     <li>
       <button
+        ref={ref}
         type="button"
         onClick={onSelect}
         aria-current={selected}
