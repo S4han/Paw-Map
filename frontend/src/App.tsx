@@ -2,16 +2,18 @@ import { useCallback, useMemo, useState } from 'react'
 import { FilterBar } from './components/FilterBar'
 import { sourceLabel } from './components/labels'
 import { MapView } from './components/MapView'
+import { MatchFilter, type MatchFilterValue } from './components/MatchFilter'
 import { PlaceCard } from './components/PlaceCard'
 import { ProfileSheet } from './components/ProfileSheet'
 import { TopBar } from './components/TopBar'
 import { categories, DEFAULT_CENTER, DEFAULT_RADIUS, type SearchRadius } from './config/app'
 import type { LatLng } from './domain/distance'
 import { filterPlaces, type PetStatusFilter } from './domain/filters'
+import { isProfileSet, matchPlace } from './domain/match'
 import { regionsForCircle } from './domain/regions'
 import { useManifest, useRegionPlaces } from './hooks/useDataset'
 import { useGeolocation } from './hooks/useGeolocation'
-import { isProfileEmpty, profileSummary, useProfile } from './hooks/useProfile'
+import { profileSummary, useProfile } from './hooks/useProfile'
 import type { SearchCandidate } from './services/kakaoSearch'
 import type { Category } from './types/place'
 
@@ -30,6 +32,7 @@ export default function App() {
   const [statusFilter, setStatusFilter] = useState<PetStatusFilter>('ALLOWED_ONLY')
   const [selectedId, setSelectedId] = useState<string>()
   const [profileOpen, setProfileOpen] = useState(false)
+  const [matchFilter, setMatchFilter] = useState<MatchFilterValue>('ALL')
 
   const regionCodes = useMemo(() => (manifest ? regionsForCircle(manifest, center, radius) : []), [manifest, center, radius])
   const placesState = useRegionPlaces(manifest, regionCodes)
@@ -38,6 +41,20 @@ export default function App() {
     () => (placesState.status === 'ready' ? filterPlaces(placesState.places, center, radius, selectedCats, statusFilter) : []),
     [placesState, center, radius, selectedCats, statusFilter],
   )
+
+  // 프로필 변경은 네트워크 없이 매칭만 다시 계산한다(아키텍처 §7)
+  const profileOn = isProfileSet(profile)
+  const matched = useMemo(() => results.map((r) => ({ ...r, match: matchPlace(r.place, profile) })), [results, profile])
+  const matchCounts = useMemo(() => {
+    const counts: Record<MatchFilterValue, number> = { ALL: matched.length, MATCH: 0, NEEDS_CONFIRMATION: 0, MISMATCH: 0 }
+    for (const m of matched) if (m.match) counts[m.match.status] += 1
+    return counts
+  }, [matched])
+  const visible = useMemo(
+    () => (profileOn && matchFilter !== 'ALL' ? matched.filter((m) => m.match?.status === matchFilter) : matched),
+    [matched, profileOn, matchFilter],
+  )
+  const visiblePlaces = useMemo(() => visible.map((v) => v.place), [visible])
 
   const moveTo = useCallback((next: SearchCenter) => {
     setCenter(next)
@@ -76,7 +93,7 @@ export default function App() {
         statusFilter={statusFilter}
         onStatusFilter={setStatusFilter}
         profileText={profileSummary(profile)}
-        profileActive={!isProfileEmpty(profile)}
+        profileActive={profileOn}
         onOpenProfile={() => setProfileOpen(true)}
       />
 
@@ -96,7 +113,7 @@ export default function App() {
           searchCenter={center}
           myLocation={geo.status === 'ok' ? geo.position : undefined}
           radius={radius}
-          places={results.map((r) => r.place)}
+          places={visiblePlaces}
           selectedId={selectedId}
           fitKey={String(fitKey)}
           onSelect={onSelect}
@@ -114,23 +131,27 @@ export default function App() {
         {!loadError && ready && manifest && (
           <>
             <p className="mb-2 text-sm text-slate-600" aria-live="polite">
-              <span className="font-medium text-slate-800">{center.label}</span> 기준 · {results.length}곳 · 거리순
+              <span className="font-medium text-slate-800">{center.label}</span> 기준 · {visible.length}곳 · 거리순
             </p>
+            {profileOn && results.length > 0 && <MatchFilter value={matchFilter} counts={matchCounts} onChange={setMatchFilter} />}
             {regionCodes.length === 0 ? (
               <p className="rounded-2xl bg-white p-4 text-sm text-slate-600 ring-1 ring-slate-200">
                 이 지역은 아직 데이터가 없어요. 지금은 제주 지역만 볼 수 있어요.
               </p>
-            ) : results.length === 0 ? (
+            ) : visible.length === 0 ? (
               <p className="rounded-2xl bg-white p-4 text-sm text-slate-600 ring-1 ring-slate-200">
-                반경 안에 조건에 맞는 장소가 없어요. 반경을 넓히거나 "미확인 포함"을 선택해 보세요.
+                {results.length === 0
+                  ? '반경 안에 조건에 맞는 장소가 없어요. 반경을 넓히거나 "미확인 포함"을 선택해 보세요.'
+                  : '이 매칭 상태의 장소가 없어요. "전체"를 눌러 다른 장소도 확인해 보세요.'}
               </p>
             ) : (
               <ul className="space-y-2">
-                {results.map(({ place, distance }) => (
+                {visible.map(({ place, distance, match }) => (
                   <PlaceCard
                     key={place.id}
                     place={place}
                     distance={distance}
+                    match={match}
                     selected={place.id === selectedId}
                     onSelect={() => setSelectedId(place.id)}
                   />

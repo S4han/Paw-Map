@@ -1,4 +1,4 @@
-import type { Category, EvidenceType, PetStatus, SourceId } from '../types/place'
+import type { Category, EvidenceType, MatchStatus, PetStatus, SourceId } from '../types/place'
 
 // 상태는 색만으로 구분하지 않고 아이콘 + 글자를 함께 쓴다(요구사항 §8.4)
 export const petStatusLabel: Record<PetStatus, { icon: string; text: string; className: string }> = {
@@ -26,4 +26,10 @@ export const evidenceTypeLabel: Record<EvidenceType, string> = {
   BUSINESS_CONFIRMED: '업체 확인',
   PROVIDER: '제공사',
   USER_REPORT: '제보(미확인)',
+}
+
+export const matchLabel: Record<MatchStatus, { icon: string; text: string; className: string }> = {
+  MATCH: { icon: '🟢', text: '조건 적합', className: 'bg-emerald-600 text-white ring-emerald-600' },
+  NEEDS_CONFIRMATION: { icon: '🟡', text: '확인 필요', className: 'bg-amber-50 text-amber-900 ring-amber-300' },
+  MISMATCH: { icon: '🔴', text: '조건 불일치', className: 'bg-rose-50 text-rose-800 ring-rose-200' },
 }

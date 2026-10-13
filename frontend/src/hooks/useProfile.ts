@@ -28,10 +28,6 @@ export function useProfile() {
   return { profile, setProfile }
 }
 
-export function isProfileEmpty(p: PetProfile): boolean {
-  return p.weightKg === undefined && p.dogCount === undefined && !p.indoorRequired
-}
-
 export function profileSummary(p: PetProfile): string {
   const parts = [
     p.weightKg !== undefined ? `${p.weightKg}kg` : null,

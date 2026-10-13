@@ -1,17 +1,19 @@
 import { useEffect, useRef } from 'react'
 import { formatDistance } from '../domain/distance'
+import type { MatchResult } from '../domain/match'
 import type { PetPlace } from '../types/place'
-import { categoryLabel, petStatusLabel, sourceLabel } from './labels'
+import { categoryLabel, matchLabel, petStatusLabel, sourceLabel } from './labels'
 
 type Props = {
   place: PetPlace
   distance: number
   selected: boolean
+  match: MatchResult | null
   onSelect: () => void
 }
 
-// 장소 카드. 프로필 매칭 배지·사유는 STEP 7, 상세 화면 이동은 STEP 8에서 붙인다.
-export function PlaceCard({ place, distance, selected, onSelect }: Props) {
+// 장소 카드. 상세 화면 이동은 STEP 8에서 붙인다.
+export function PlaceCard({ place, distance, selected, match, onSelect }: Props) {
   const ref = useRef<HTMLButtonElement>(null)
   const status = petStatusLabel[place.petStatus]
   const main = place.evidence[0]
@@ -41,12 +43,25 @@ export function PlaceCard({ place, distance, selected, onSelect }: Props) {
           <span className={`rounded-full px-2 py-0.5 text-xs font-medium ring-1 ${status.className}`}>
             {status.icon} {status.text}
           </span>
+          {match && (
+            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ${matchLabel[match.status].className}`}>
+              {matchLabel[match.status].icon} {matchLabel[match.status].text}
+            </span>
+          )}
           {place.conflictingEvidence && (
             <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-amber-200">
               ⚠️ 출처 간 정보 충돌
             </span>
           )}
         </div>
+        {match && match.status !== 'MATCH' && (
+          // 왜 적합이 아닌지: 불일치·충돌·정보 없음 사유를 먼저(요구사항 AC-01-5)
+          <p className="mt-1.5 text-xs text-slate-700">
+            {match.reasons
+              .map((r) => (r.result === 'OK' ? `${r.message} ✓` : r.message))
+              .join(' · ')}
+          </p>
+        )}
         <p className="mt-1.5 text-xs text-slate-500">
           {main ? `${sourceLabel[main.source]} · ${main.claim}` : '동반 정보 출처 없음'} · {date}
         </p>
