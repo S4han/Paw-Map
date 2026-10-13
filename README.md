@@ -44,3 +44,6 @@ echo "VITE_DATASET_BASE=/data/live" >> ../frontend/.env.local   # 개발 서버 
 - 결과(`frontend/public/data/live/`), 캐시(`ingest/cache/`), 보고서(`reports/`)는 커밋하지 않습니다(식약처 재배포 조건 확인 전).
 - 관광공사 상세는 수정일이 같으면 캐시를 재사용하고, 실행당 호출 상한(기본 800회)을 넘으면 멈춥니다.
 
+## 배포·운영
+
+[`docs/operations.md`](docs/operations.md) — 공개 범위 결정, Cloudflare Pages 직접 업로드, 정기 갱신, 점검표, 문제 대응.

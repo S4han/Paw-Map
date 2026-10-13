@@ -2,13 +2,35 @@
   "name": "PAW MAP",
   "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
   "features": {
-    "ghcr.io/devcontainers/features/node:1": { "version": "22" }
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    }
   },
   "postCreateCommand": "bash .devcontainer/post-create.sh",
-  "forwardPorts": [5173],
-  "portsAttributes": { "5173": { "label": "PAW MAP (Vite)", "onAutoForward": "openBrowser" } },
+  "forwardPorts": [
+    5173
+  ],
+  "portsAttributes": {
+    "5173": {
+      "label": "PAW MAP (Vite)",
+      "onAutoForward": "openBrowser"
+    }
+  },
   "secrets": {
-    "DATA_GO_KR_SERVICE_KEY": { "description": "공공데이터포털 인증키(한국관광공사 반려동물 동반여행 서비스) — 가공 파이프라인 전용" },
-    "KAKAO_REST_API_KEY": { "description": "카카오 REST API 키 — 가공 파이프라인의 주소→좌표 변환 전용" }
+    "DATA_GO_KR_SERVICE_KEY": {
+      "description": "공공데이터포털 인증키(한국관광공사 반려동물 동반여행 서비스) — 가공 파이프라인 전용"
+    },
+    "KAKAO_REST_API_KEY": {
+      "description": "카카오 REST API 키 — 가공 파이프라인의 주소→좌표 변환 전용"
+    },
+    "VITE_KAKAO_JS_KEY": {
+      "description": "카카오 JavaScript 키(브라우저 공개 키, 카카오 콘솔에서 도메인 제한)"
+    },
+    "CLOUDFLARE_API_TOKEN": {
+      "description": "Cloudflare Pages 업로드용 API 토큰(Pages Edit 권한) — 배포 전용"
+    },
+    "CLOUDFLARE_ACCOUNT_ID": {
+      "description": "Cloudflare 계정 ID — 배포 전용"
+    }
   }
 }

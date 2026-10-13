@@ -7,7 +7,7 @@
 
 - STEP 단위로 작업하고, 단계마다 사용자 승인 후 다음 단계로 간다. 단계 보고 형식은 마스터 지침 §8.
 - 검증하지 않은 API 사양·요금·약관을 사실로 쓰지 않는다. 문서에는 실측(✅)·검색 요약(🔷)·커뮤니티(⚠️)·미확인(❓)을 구분한다.
-- 파일 삭제, 배포, 유료 리소스 생성, 외부 서비스에 쓰기는 사전 승인.
+- 파일 삭제, 배포, 유료 리소스 생성, 외부 서비스에 쓰기는 사전 승인. 배포 절차는 `docs/operations.md`.
 
 ## 데이터 원칙 (가장 중요)
 
@@ -29,6 +29,8 @@
 cd frontend && npm run dev        # 개발 서버
 cd frontend && npm test           # Vitest
 cd frontend && npm run build      # 타입 검사 + 빌드
+cd frontend && npm run check:secrets   # 빌드 결과에 서버 키가 없는지
+cd frontend && npm run e2e        # Playwright 주요 흐름(처음 한 번 npx playwright install chromium)
 cd ingest && .venv/bin/pytest     # 가공 파이프라인 테스트
 cd ingest && .venv/bin/pawmap-ingest validate ../frontend/public/data/mock   # 데이터셋 검증
 cd ingest && .venv/bin/pawmap-ingest build --region 50 --out ../frontend/public/data/live --mfds input/파일.xlsx --mfds-date YYYY-MM-DD
