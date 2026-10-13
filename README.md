@@ -27,3 +27,20 @@ cd ../ingest
 - 지도: `frontend/.env.local`에 `VITE_KAKAO_JS_KEY=카카오 JavaScript 키`를 넣으면 지도가 보입니다(카카오 콘솔에 사이트 도메인 등록 필요). 없으면 목록 전용 모드로 동작합니다.
 - 지금 화면의 장소는 모두 **가상(Mock) 데이터**입니다.
 
+## 실제 데이터 만들기 (가공 파이프라인)
+
+필요한 키(Codespaces 시크릿): `DATA_GO_KR_SERVICE_KEY`(관광공사 반려동물 동반여행 서비스 활용신청), `KAKAO_REST_API_KEY`(카카오 앱의 REST API 키 — 식약처 주소→좌표 변환).
+
+```bash
+# 식약처 '반려동물 동반 가능 업소 현황' xlsx 를 ingest/input/ 에 올린 뒤
+cd ingest
+.venv/bin/pawmap-ingest build --region 50 --out ../frontend/public/data/live \
+  --mfds input/받은파일.xlsx --mfds-date 2026-10-13
+
+# 화면에서 실제 데이터 보기
+echo "VITE_DATASET_BASE=/data/live" >> ../frontend/.env.local   # 개발 서버 재시작
+```
+
+- 결과(`frontend/public/data/live/`), 캐시(`ingest/cache/`), 보고서(`reports/`)는 커밋하지 않습니다(식약처 재배포 조건 확인 전).
+- 관광공사 상세는 수정일이 같으면 캐시를 재사용하고, 실행당 호출 상한(기본 800회)을 넘으면 멈춥니다.
+

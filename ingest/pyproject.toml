@@ -3,7 +3,7 @@ name = "pawmap-ingest"
 version = "0.1.0"
 description = "PAW MAP 데이터 가공 파이프라인(관광공사·식약처 → 시도별 데이터셋)"
 requires-python = ">=3.11"
-dependencies = ["pydantic>=2.7"]
+dependencies = ["pydantic>=2.7", "openpyxl>=3.1"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]

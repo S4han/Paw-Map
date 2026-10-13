@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { FilterBar } from './components/FilterBar'
+import { sourceLabel } from './components/labels'
 import { MapView } from './components/MapView'
 import { PlaceCard } from './components/PlaceCard'
 import { ProfileSheet } from './components/ProfileSheet'
@@ -137,6 +138,8 @@ export default function App() {
               </ul>
             )}
             <p className="mt-4 text-center text-xs text-slate-400">
+              자료: {manifest.sources.map((src) => `${sourceLabel[src.source]}(${src.fetchedAt.slice(0, 10)})`).join(', ')}
+              <br />
               정보 기준일 {manifest.generatedAt.slice(0, 10)} · 방문 전 업체에 꼭 확인하세요
             </p>
           </>

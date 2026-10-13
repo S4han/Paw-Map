@@ -31,9 +31,10 @@ cd frontend && npm test           # Vitest
 cd frontend && npm run build      # 타입 검사 + 빌드
 cd ingest && .venv/bin/pytest     # 가공 파이프라인 테스트
 cd ingest && .venv/bin/pawmap-ingest validate ../frontend/public/data/mock   # 데이터셋 검증
+cd ingest && .venv/bin/pawmap-ingest build --region 50 --out ../frontend/public/data/live --mfds input/파일.xlsx --mfds-date YYYY-MM-DD
 ```
 
 ## 보안
 
-- 공개 저장소다. 키·`.env*`·원본 데이터 파일(`ingest/input/`)·가공 보고서(`reports/`)·`poc/out/`은 커밋하지 않는다.
+- 공개 저장소다. 키·`.env*`·원본 데이터 파일(`ingest/input/`)·가공 캐시(`ingest/cache/`)·실데이터(`frontend/public/data/live/`)·가공 보고서(`reports/`)·`poc/out/`은 커밋하지 않는다.
 - 브라우저에 들어가는 키는 카카오 JavaScript 키(도메인 제한)뿐. REST 키·공공데이터 키는 가공 환경에만.

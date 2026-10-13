@@ -20,3 +20,7 @@ dist/
 # 원본 데이터·가공 보고서(이용조건 확인 전 커밋 금지)
 ingest/input/
 reports/
+
+# 가공 캐시·실데이터(식약처 재배포 조건 확인 전 커밋 금지)
+ingest/cache/
+frontend/public/data/live/
