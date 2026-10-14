@@ -1,0 +1,70 @@
+# main 에 코드가 들어오면 검사 → 빌드 → Cloudflare Pages 배포(docs/operations.md §2.3)
+# 실데이터는 저장소에 없으므로 운영 사이트의 현재 데이터를 받아 검증한 뒤 함께 올린다.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # Actions 화면에서 수동 실행
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 가공 패키지 설치(데이터 검증용)
+        run: pip install -q -e ingest
+
+      - name: 프론트 의존성
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund
+
+      - name: 단위 테스트
+        working-directory: frontend
+        run: npm test
+
+      - name: 운영 실데이터 받기
+        working-directory: frontend
+        run: node scripts/fetch-live-data.mjs
+        env:
+          LIVE_DATA_URL: https://paw-map.pages.dev/data/live
+
+      - name: 실데이터 검증
+        run: pawmap-ingest validate frontend/public/data/live
+
+      - name: 빌드
+        working-directory: frontend
+        run: npm run build
+        env:
+          VITE_DATASET_BASE: /data/live
+          VITE_KAKAO_JS_KEY: ${{ secrets.VITE_KAKAO_JS_KEY }}
+
+      - name: 키 노출 검사
+        working-directory: frontend
+        run: npm run check:secrets
+
+      - name: Cloudflare Pages 배포
+        working-directory: frontend
+        run: npx --yes wrangler@4 pages deploy dist --project-name paw-map --branch main --commit-hash "$GITHUB_SHA"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

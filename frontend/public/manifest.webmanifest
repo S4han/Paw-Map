@@ -1,0 +1,11 @@
+{
+  "name": "PAW MAP",
+  "short_name": "PAW MAP",
+  "description": "반려견과 함께 갈 수 있는 곳을 내 반려견 조건으로 찾아요",
+  "lang": "ko",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
