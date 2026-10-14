@@ -164,4 +164,12 @@ test.describe('위치 권한 허용', () => {
     await expect(summary(page)).toContainText('내 위치')
     await expect(page.getByText(/위치 권한이 꺼져 있어요/)).toHaveCount(0)
   })
+
+  test('◎로 내 위치에 돌아오면 검색창의 예전 지역 이름을 비운다', async ({ page }) => {
+    const box = page.getByRole('searchbox', { name: '지역·주소·관광지 검색' })
+    await box.fill('우석대학교 전주캠퍼스')
+    await page.getByRole('button', { name: '현재 위치로 찾기' }).click()
+    await expect(box).toHaveValue('')
+    await expect(summary(page)).toContainText('내 위치')
+  })
 })
