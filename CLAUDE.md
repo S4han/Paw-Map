@@ -33,7 +33,7 @@ cd frontend && npm run check:secrets   # 빌드 결과에 서버 키가 없는�
 cd frontend && npm run e2e        # Playwright 주요 흐름(처음 한 번 npx playwright install chromium)
 cd ingest && .venv/bin/pytest     # 가공 파이프라인 테스트
 cd ingest && .venv/bin/pawmap-ingest validate ../frontend/public/data/mock   # 데이터셋 검증
-cd ingest && .venv/bin/pawmap-ingest build --region 50 --out ../frontend/public/data/live --mfds input/파일.xlsx --mfds-date YYYY-MM-DD
+cd ingest && .venv/bin/pawmap-ingest build --region 50 --out ../frontend/public/data/live --mfds input/파일.xlsx --mfds-date YYYY-MM-DD --kcisa input/파일.csv --kcisa-date YYYY-MM-DD
 ```
 
 ## 보안

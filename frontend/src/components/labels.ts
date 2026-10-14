@@ -17,6 +17,7 @@ export const categoryLabel: Record<Category, string> = {
 export const sourceLabel: Record<SourceId, string> = {
   KTO_PET: '한국관광공사',
   MFDS_PET: '식약처',
+  KCISA_PET: '한국문화정보원',
   GOOGLE: 'Google',
   MOCK: '가상 데이터',
 }
@@ -38,4 +39,5 @@ export const matchLabel: Record<MatchStatus, { icon: string; text: string; class
 export const sourceLink: Partial<Record<SourceId, { name: string; url: string }>> = {
   KTO_PET: { name: '한국관광공사 반려동물 동반여행 정보', url: 'https://www.data.go.kr/data/15135102/openapi.do' },
   MFDS_PET: { name: '식품의약품안전처 식품안전나라 반려동물 동반 가능 업소 현황', url: 'https://www.foodsafetykorea.go.kr/portal/petKorea.do' },
+  KCISA_PET: { name: '한국문화정보원 전국 반려동물 동반 가능 문화시설 위치 데이터', url: 'https://www.data.go.kr/data/15111389/fileData.do' },
 }

@@ -1,7 +1,8 @@
 """명령줄 도구.
 
   pawmap-ingest build --region 50 --out <데이터셋 폴더> [--mfds 식약처.xlsx --mfds-date YYYY-MM-DD]
-                                         관광공사·식약처 → 시도 파일 생성 + 검증 + 보고서
+                                         [--kcisa 한국문화정보원.csv --kcisa-date YYYY-MM-DD]
+                                         관광공사·식약처·한국문화정보원 → 시도 파일 생성 + 검증 + 보고서
   pawmap-ingest validate <데이터셋 폴더>   manifest·시도 파일의 스키마와 판정 규칙 검증
   pawmap-ingest schema [출력 파일]         데이터셋 JSON 스키마 내보내기
 
@@ -51,6 +52,7 @@ def _env_key(name: str) -> str:
 def run_build(args: argparse.Namespace) -> int:
     from .build import BuildInputs, build_region, write_outputs
     from .geocode import Geocoder, make_kakao_lookup
+    from .sources import kcisa as kcisa_source
     from .sources import mfds as mfds_source
     from .sources.kto import KtoSource, http_fetcher
 
@@ -65,6 +67,11 @@ def run_build(args: argparse.Namespace) -> int:
         inp.mfds_rows = mfds_source.parse_rows(mfds_source.read_xlsx(Path(args.mfds)))
         inp.mfds_fetched_at = args.mfds_date
         inp.geocoder = Geocoder(make_kakao_lookup(_env_key("KAKAO_REST_API_KEY")), cache / "geocode.json")
+    if args.kcisa:
+        if not args.kcisa_date:
+            raise SystemExit("[중단] --kcisa-date(한국문화정보원 파일을 받은 날, YYYY-MM-DD)가 필요합니다")
+        inp.kcisa_rows = kcisa_source.read_csv(Path(args.kcisa))
+        inp.kcisa_fetched_at = args.kcisa_date
 
     try:
         places, report, sources = build_region(inp)
@@ -94,6 +101,8 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--out", required=True, help="데이터셋 폴더(예: ../frontend/public/data/live)")
     b.add_argument("--mfds", help="식약처 반려동물 동반 가능 업소 현황 xlsx")
     b.add_argument("--mfds-date", help="식약처 파일을 받은 날 YYYY-MM-DD")
+    b.add_argument("--kcisa", help="한국문화정보원 반려동물 동반 가능 문화시설 위치 데이터 csv")
+    b.add_argument("--kcisa-date", help="한국문화정보원 파일을 받은 날 YYYY-MM-DD")
     b.add_argument("--skip-kto", action="store_true")
     b.add_argument("--max-calls", type=int, default=800, help="관광공사 실행당 호출 상한")
     b.add_argument("--cache-dir", default="cache")
