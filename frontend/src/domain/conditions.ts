@@ -44,6 +44,12 @@ export function conditionRows(c: PetConditions): ConditionRow[] {
   ]
 }
 
+// 정보 출처 한 항목을 두 줄(출처·판정 / 날짜)로: 출처 이름을 되풀이하는 설명은 숨기고, 인허가 자료는 동반 판정 대신 영업 상태를 보인다
+export function evidenceSummary(e: Pick<Evidence, 'source' | 'claim'>, label: string): { status?: string; claim?: string } {
+  if (e.source.startsWith('MOIS_')) return { status: e.claim.split(': ')[1] || undefined }
+  return { claim: e.claim.startsWith(label.split(' ')[0]) ? undefined : e.claim }
+}
+
 // 근거의 날짜 문구: 출처가 준 확인일과 우리가 받은 날을 섞지 않는다(요구사항 §7.2)
 export function evidenceDateText(e: Evidence): string {
   const fetched = `조회 ${e.fetchedAt.slice(0, 10)}`

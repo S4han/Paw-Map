@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Evidence, PetConditions, PetPlace } from '../types/place'
-import { cardTags, conditionRows, evidenceDateText, shortRegion } from './conditions'
+import { cardTags, conditionRows, evidenceDateText, evidenceSummary, shortRegion } from './conditions'
 import { directionLinks, secureImageUrl, telHref } from './links'
 
 const cond = (c: Partial<PetConditions> = {}): PetConditions => ({ notes: [], fieldSources: {}, conflicts: [], ...c })
@@ -38,6 +38,17 @@ describe('evidenceDateText', () => {
   it('확인일과 조회일을 다른 말로 구분한다', () => {
     expect(evidenceDateText({ ...base, checkedAt: '2026-08-01' })).toBe('출처 수정·확인 2026-08-01 · 조회 2026-10-13')
     expect(evidenceDateText(base)).toBe('출처 확인일 정보 없음 · 조회 2026-10-13')
+  })
+})
+
+describe('evidenceSummary', () => {
+  it('출처 이름을 되풀이하는 설명은 숨기고, 내용이 있는 설명은 남긴다', () => {
+    expect(evidenceSummary({ source: 'KCISA_PET', claim: '한국문화정보원 반려동물 동반 가능(동물약국)' }, '한국문화정보원')).toEqual({ claim: undefined })
+    expect(evidenceSummary({ source: 'MFDS_PET', claim: '식약처 반려동물 동반출입 음식점 등록' }, '식약처')).toEqual({ claim: undefined })
+    expect(evidenceSummary({ source: 'KTO_PET', claim: '전구역 동반가능' }, '한국관광공사')).toEqual({ claim: '전구역 동반가능' })
+  })
+  it('인허가 자료는 동반 판정 대신 영업 상태', () => {
+    expect(evidenceSummary({ source: 'MOIS_PHARMACY', claim: '행정안전부 동물약국 인허가: 영업/정상' }, '행정안전부 동물약국 인허가')).toEqual({ status: '영업/정상' })
   })
 })
 
