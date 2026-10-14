@@ -17,6 +17,10 @@ test('첫 화면: 목록이 기본, 지도보기로 전환, 출처·기준일', 
   await page.getByRole('button', { name: /목록보기/ }).click()
   await expect(page.getByText(/자료:/)).toContainText('가상 데이터')
   await expect(page.getByText('방문 전 업체에 꼭 확인하세요')).toBeVisible()
+  // iPhone 자동 확대 방지: 입력창·선택 상자 글자는 16px 이상
+  for (const el of [page.getByRole('searchbox'), page.getByLabel('동반 상태')]) {
+    expect(await el.evaluate((e) => parseFloat(getComputedStyle(e).fontSize))).toBeGreaterThanOrEqual(16)
+  }
 })
 
 test('카테고리 탭·동반 상태·공간 필터', async ({ page }) => {
