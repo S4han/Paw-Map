@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { conditionRows, evidenceDateText, type RowState } from '../domain/conditions'
+import { REPORT_ISSUES_NEW_URL } from '../config/app'
 import { formatDistance } from '../domain/distance'
-import { directionLinks, secureImageUrl, telHref } from '../domain/links'
+import { freshness, freshnessAdvice } from '../domain/freshness'
+import { directionLinks, reportIssueUrl, secureImageUrl, telHref } from '../domain/links'
 import type { MatchResult } from '../domain/match'
 import type { PetPlace } from '../types/place'
 import { categoryLabel, evidenceTypeLabel, matchLabel, petStatusLabel, sourceLabel } from './labels'
@@ -10,6 +12,8 @@ type Props = {
   place: PetPlace
   distance: number | null
   match: MatchResult | null
+  favorite: boolean
+  onToggleFavorite: () => void
   onClose: () => void
 }
 
@@ -18,13 +22,15 @@ const reasonIcon = { OK: '✅', FAIL: '🚫', UNKNOWN: '❔', CONFLICT: '⚠️'
 const imageCredit = { Type1: '공공누리 제1유형', Type3: '공공누리 제3유형(변경 금지)' } as const
 
 // 장소 상세(요구사항 FR-007, US-05). 전체 화면 대화상자, Esc·뒤로가기로 닫힘
-export function PlaceDetail({ place, distance, match, onClose }: Props) {
+export function PlaceDetail({ place, distance, match, favorite, onToggleFavorite, onClose }: Props) {
   const closeRef = useRef<HTMLButtonElement>(null)
   const [copied, setCopied] = useState(false)
   const [imageOk, setImageOk] = useState(true)
   const status = petStatusLabel[place.petStatus]
   const tel = telHref(place.phone)
   const image = imageOk ? secureImageUrl(place.imageUrl) : null
+  const fresh = freshness(place)
+  const advice = freshnessAdvice(fresh)
 
   useEffect(() => {
     closeRef.current?.focus()
@@ -54,6 +60,15 @@ export function PlaceDetail({ place, distance, match, onClose }: Props) {
           <h2 id="detail-title" className="min-w-0 flex-1 truncate text-lg font-bold">
             {place.name}
           </h2>
+          <button
+            type="button"
+            onClick={onToggleFavorite}
+            aria-pressed={favorite}
+            aria-label={favorite ? '저장 해제' : '이 장소 저장'}
+            className={`h-11 shrink-0 rounded-full px-3 text-sm font-medium ring-1 ${favorite ? 'bg-amber-100 text-amber-900 ring-amber-300' : 'bg-white text-slate-700 ring-slate-200'}`}
+          >
+            {favorite ? '★ 저장됨' : '☆ 저장'}
+          </button>
         </header>
 
         {image && (
@@ -147,6 +162,15 @@ export function PlaceDetail({ place, distance, match, onClose }: Props) {
             )}
           </section>
 
+          {advice && (
+            <p
+              className={`rounded-xl px-3 py-2 text-sm ring-1 ${fresh.level === 'NO_DATE' ? 'bg-slate-100 text-slate-700 ring-slate-200' : 'bg-amber-50 text-amber-900 ring-amber-300'}`}
+              role="note"
+            >
+              🕒 {fresh.text}. {advice}
+            </p>
+          )}
+
           <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200" role="note">
             ⚠️ 동반 조건은 바뀔 수 있어요. 방문 전에 업체에 꼭 확인하세요.
             {place.category === 'STAY' && ' 예약 가능 여부·객실 조건은 예약 사이트나 숙소에서 확인해야 해요.'}
@@ -180,6 +204,23 @@ export function PlaceDetail({ place, distance, match, onClose }: Props) {
                 예약 사이트로 이동 ↗ <span className="ml-1 text-xs text-slate-500">(예약 가능 여부는 사이트에서 확인)</span>
               </a>
             )}
+          </section>
+
+          <section className="rounded-2xl bg-white p-4 text-sm ring-1 ring-slate-200" aria-labelledby="report-title">
+            <h3 id="report-title" className="font-semibold">
+              정보가 다른가요?
+            </h3>
+            <p className="mt-1 text-slate-600">
+              제보는 바로 반영되지 않고, 다음 데이터 갱신 때 확인한 뒤 반영해요. GitHub 계정이 필요하고 제보 내용은 공개돼요.
+            </p>
+            <a
+              href={reportIssueUrl(REPORT_ISSUES_NEW_URL, place)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 flex h-11 items-center justify-center rounded-xl bg-slate-100 font-medium"
+            >
+              정보 수정 제보하기 ↗
+            </a>
           </section>
         </div>
       </div>

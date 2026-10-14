@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { formatDistance } from '../domain/distance'
+import { freshness } from '../domain/freshness'
 import type { MatchResult } from '../domain/match'
 import type { PetPlace } from '../types/place'
 import { categoryLabel, matchLabel, petStatusLabel, sourceLabel } from './labels'
@@ -17,7 +18,7 @@ export function PlaceCard({ place, distance, selected, match, onSelect }: Props)
   const ref = useRef<HTMLButtonElement>(null)
   const status = petStatusLabel[place.petStatus]
   const main = place.evidence[0]
-  const date = place.lastVerifiedAt ? `확인 ${place.lastVerifiedAt}` : '확인일 정보 없음'
+  const fresh = freshness(place)
 
   // 지도 마커로 선택되면 목록에서 해당 카드를 보이게 한다
   useEffect(() => {
@@ -63,7 +64,8 @@ export function PlaceCard({ place, distance, selected, match, onSelect }: Props)
           </p>
         )}
         <p className="mt-1.5 text-xs text-slate-500">
-          {main ? `${sourceLabel[main.source]} · ${main.claim}` : '동반 정보 출처 없음'} · {date}
+          {main ? `${sourceLabel[main.source]} · ${main.claim}` : '동반 정보 출처 없음'} ·{' '}
+          <span className={fresh.level === 'STALE' || fresh.level === 'AGING' ? 'font-medium text-amber-700' : ''}>{fresh.text}</span>
         </p>
       </button>
     </li>

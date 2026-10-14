@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { CourseSheet } from './components/CourseSheet'
 import { FilterBar } from './components/FilterBar'
 import { sourceLabel, sourceLink } from './components/labels'
 import { MapView } from './components/MapView'
@@ -8,11 +9,14 @@ import { PlaceDetail } from './components/PlaceDetail'
 import { ProfileSheet } from './components/ProfileSheet'
 import { TopBar } from './components/TopBar'
 import { categories, DEFAULT_CENTER, DEFAULT_RADIUS, type SearchRadius } from './config/app'
+import { buildCourse } from './domain/course'
 import { distanceMeters, type LatLng } from './domain/distance'
+import { isFavorite } from './domain/favorites'
 import { filterPlaces, type PetStatusFilter } from './domain/filters'
 import { isProfileSet, matchPlace } from './domain/match'
 import { regionsForCircle } from './domain/regions'
 import { useManifest, useRegionPlaces } from './hooks/useDataset'
+import { useFavorites } from './hooks/useFavorites'
 import { useGeolocation } from './hooks/useGeolocation'
 import { usePlaceRoute } from './hooks/usePlaceRoute'
 import { profileSummary, useProfile } from './hooks/useProfile'
@@ -26,6 +30,7 @@ export default function App() {
   const manifest = manifestState.status === 'ready' ? manifestState.manifest : null
   const { profile, setProfile } = useProfile()
   const { geo, locate } = useGeolocation()
+  const { favorites, toggle: toggleFavorite } = useFavorites()
   const { placeId, open: openDetail, close: closeDetail } = usePlaceRoute()
 
   const [center, setCenter] = useState<SearchCenter>({ ...DEFAULT_CENTER, label: '제주시청(기본 위치)' })
@@ -36,6 +41,8 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string>()
   const [profileOpen, setProfileOpen] = useState(false)
   const [matchFilter, setMatchFilter] = useState<MatchFilterValue>('ALL')
+  const [listMode, setListMode] = useState<'results' | 'favorites'>('results')
+  const [courseOpen, setCourseOpen] = useState(false)
 
   const regionCodes = useMemo(() => (manifest ? regionsForCircle(manifest, center, radius) : []), [manifest, center, radius])
   const placesState = useRegionPlaces(manifest, regionCodes)
@@ -57,7 +64,25 @@ export default function App() {
     () => (profileOn && matchFilter !== 'ALL' ? matched.filter((m) => m.match?.status === matchFilter) : matched),
     [matched, profileOn, matchFilter],
   )
-  const visiblePlaces = useMemo(() => visible.map((v) => v.place), [visible])
+  const allPlaces = useMemo(() => (placesState.status === 'ready' ? placesState.places : []), [placesState])
+
+  // 저장한 곳: 반경·필터와 상관없이 보여 준다. 지금 불러온 데이터에 없으면(다른 지역·데이터 갱신) 이름만 남긴다
+  const favoriteItems = useMemo(
+    () =>
+      favorites.map((saved) => {
+        const place = allPlaces.find((p) => p.id === saved.id)
+        return place
+          ? { saved, place, distance: distanceMeters(center, { lat: place.latitude, lng: place.longitude }), match: matchPlace(place, profile) }
+          : { saved, place: undefined, distance: 0, match: null }
+      }),
+    [favorites, allPlaces, center, profile],
+  )
+  const course = useMemo(() => (courseOpen ? buildCourse(allPlaces, center, profile) : null), [courseOpen, allPlaces, center, profile])
+
+  const visiblePlaces = useMemo(
+    () => (listMode === 'favorites' ? favoriteItems.flatMap((f) => (f.place ? [f.place] : [])) : visible.map((v) => v.place)),
+    [listMode, favoriteItems, visible],
+  )
 
   // 상세: 목록에 보이지 않는 장소(공유 링크)도 열 수 있도록 불러온 전체 데이터에서 찾는다
   const detailPlace = placeId && placesState.status === 'ready' ? placesState.places.find((p) => p.id === placeId) : undefined
@@ -106,6 +131,7 @@ export default function App() {
       return next
     })
   const closeProfile = useCallback(() => setProfileOpen(false), [])
+  const closeCourse = useCallback(() => setCourseOpen(false), [])
   const onSelect = useCallback((id: string) => setSelectedId(id), [])
 
   const loadError = manifestState.status === 'error' ? manifestState.message : placesState.status === 'error' ? placesState.message : null
@@ -165,49 +191,110 @@ export default function App() {
         {!loadError && !ready && <p role="status">불러오는 중…</p>}
         {!loadError && ready && manifest && (
           <>
-            <p className="mb-2 text-sm text-slate-600" aria-live="polite">
-              <span className="font-medium text-slate-800">{center.label}</span> 기준 · {visible.length}곳 · 거리순
-            </p>
-            {profileOn && results.length > 0 && <MatchFilter value={matchFilter} counts={matchCounts} onChange={setMatchFilter} />}
-            {selectedCats.has('STAY') && (
-              <p className="mb-2 rounded-lg bg-sky-50 px-3 py-1.5 text-xs text-sky-900" role="note">
-                ⓘ 반려견 동반 숙소 공식 정보가 아직 적어요. 예약 전 숙소에 꼭 확인하세요.
-              </p>
-            )}
-            {detailMissing && (
-              <p className="mb-2 rounded-lg bg-rose-50 px-3 py-1.5 text-xs text-rose-800" role="alert">
-                링크의 장소를 이 지역 데이터에서 찾을 수 없어요.{' '}
-                <button type="button" onClick={closeDetail} className="underline">
-                  닫기
-                </button>
-              </p>
-            )}
-            {regionCodes.length === 0 ? (
-              <p className="rounded-2xl bg-white p-4 text-sm text-slate-600 ring-1 ring-slate-200">
-                이 지역은 아직 데이터가 없어요. 지금은 제주 지역만 볼 수 있어요.
-              </p>
-            ) : visible.length === 0 ? (
-              <p className="rounded-2xl bg-white p-4 text-sm text-slate-600 ring-1 ring-slate-200">
-                {results.length === 0
-                  ? '반경 안에 조건에 맞는 장소가 없어요. 반경을 넓히거나 "미확인 포함"을 선택해 보세요.'
-                  : '이 매칭 상태의 장소가 없어요. "전체"를 눌러 다른 장소도 확인해 보세요.'}
-              </p>
+            <div className="mb-2 flex gap-2">
+              <button
+                type="button"
+                aria-pressed={listMode === 'favorites'}
+                onClick={() => setListMode((m) => (m === 'favorites' ? 'results' : 'favorites'))}
+                className={`h-10 rounded-full px-3 text-sm font-medium ring-1 ${listMode === 'favorites' ? 'bg-amber-100 text-amber-900 ring-amber-300' : 'bg-white text-slate-700 ring-slate-200'}`}
+              >
+                ★ 저장한 곳 {favorites.length}
+              </button>
+              <button
+                type="button"
+                onClick={() => setCourseOpen(true)}
+                disabled={regionCodes.length === 0}
+                className="h-10 rounded-full bg-white px-3 text-sm font-medium text-slate-700 ring-1 ring-slate-200 disabled:opacity-50"
+              >
+                🧭 코스 추천
+              </button>
+            </div>
+            {listMode === 'favorites' ? (
+              <>
+                <p className="mb-2 text-sm text-slate-600" aria-live="polite">
+                  저장한 곳 {favorites.length}곳 · 이 기기에만 저장돼요
+                </p>
+                {favorites.length === 0 ? (
+                  <p className="rounded-2xl bg-white p-4 text-sm text-slate-600 ring-1 ring-slate-200">
+                    아직 저장한 곳이 없어요. 장소 상세 화면에서 ☆ 저장을 눌러 보세요.
+                  </p>
+                ) : (
+                  <ul className="space-y-2" aria-label="저장한 곳">
+                    {favoriteItems.map(({ saved, place, distance, match }) =>
+                      place ? (
+                        <PlaceCard
+                          key={saved.id}
+                          place={place}
+                          distance={distance}
+                          match={match}
+                          selected={place.id === selectedId}
+                          onSelect={() => {
+                            setSelectedId(place.id)
+                            openDetail(place.id)
+                          }}
+                        />
+                      ) : (
+                        <li key={saved.id} className="flex items-center gap-2 rounded-2xl bg-white p-3 text-sm ring-1 ring-slate-200">
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-semibold">{saved.name}</span>
+                            <span className="block text-xs text-slate-500">지금 불러온 지역 데이터에 없어요(다른 지역이거나 정보가 바뀌었을 수 있어요)</span>
+                          </span>
+                          <button type="button" onClick={() => toggleFavorite(saved)} className="h-10 shrink-0 rounded-lg bg-slate-100 px-3 text-xs">
+                            저장 해제
+                          </button>
+                        </li>
+                      ),
+                    )}
+                  </ul>
+                )}
+              </>
             ) : (
-              <ul className="space-y-2">
-                {visible.map(({ place, distance, match }) => (
-                  <PlaceCard
-                    key={place.id}
-                    place={place}
-                    distance={distance}
-                    match={match}
-                    selected={place.id === selectedId}
-                    onSelect={() => {
-                      setSelectedId(place.id)
-                      openDetail(place.id)
-                    }}
-                  />
-                ))}
-              </ul>
+              <>
+                <p className="mb-2 text-sm text-slate-600" aria-live="polite">
+                  <span className="font-medium text-slate-800">{center.label}</span> 기준 · {visible.length}곳 · 거리순
+                </p>
+                {profileOn && results.length > 0 && <MatchFilter value={matchFilter} counts={matchCounts} onChange={setMatchFilter} />}
+                {selectedCats.has('STAY') && (
+                  <p className="mb-2 rounded-lg bg-sky-50 px-3 py-1.5 text-xs text-sky-900" role="note">
+                    ⓘ 반려견 동반 숙소 공식 정보가 아직 적어요. 예약 전 숙소에 꼭 확인하세요.
+                  </p>
+                )}
+                {detailMissing && (
+                  <p className="mb-2 rounded-lg bg-rose-50 px-3 py-1.5 text-xs text-rose-800" role="alert">
+                    링크의 장소를 이 지역 데이터에서 찾을 수 없어요.{' '}
+                    <button type="button" onClick={closeDetail} className="underline">
+                      닫기
+                    </button>
+                  </p>
+                )}
+                {regionCodes.length === 0 ? (
+                  <p className="rounded-2xl bg-white p-4 text-sm text-slate-600 ring-1 ring-slate-200">
+                    이 지역은 아직 데이터가 없어요. 지금은 제주 지역만 볼 수 있어요.
+                  </p>
+                ) : visible.length === 0 ? (
+                  <p className="rounded-2xl bg-white p-4 text-sm text-slate-600 ring-1 ring-slate-200">
+                    {results.length === 0
+                      ? '반경 안에 조건에 맞는 장소가 없어요. 반경을 넓히거나 "미확인 포함"을 선택해 보세요.'
+                      : '이 매칭 상태의 장소가 없어요. "전체"를 눌러 다른 장소도 확인해 보세요.'}
+                  </p>
+                ) : (
+                  <ul className="space-y-2">
+                    {visible.map(({ place, distance, match }) => (
+                      <PlaceCard
+                        key={place.id}
+                        place={place}
+                        distance={distance}
+                        match={match}
+                        selected={place.id === selectedId}
+                        onSelect={() => {
+                          setSelectedId(place.id)
+                          openDetail(place.id)
+                        }}
+                      />
+                    ))}
+                  </ul>
+                )}
+              </>
             )}
             <p className="mt-4 text-center text-xs text-slate-400">
               자료:{' '}
@@ -239,9 +326,23 @@ export default function App() {
           place={detailPlace}
           distance={distanceMeters(center, { lat: detailPlace.latitude, lng: detailPlace.longitude })}
           match={matchPlace(detailPlace, profile)}
+          favorite={isFavorite(favorites, detailPlace.id)}
+          onToggleFavorite={() => toggleFavorite(detailPlace)}
           onClose={closeDetail}
         />
       )}
+
+      <CourseSheet
+        open={courseOpen}
+        course={course}
+        startLabel={center.label}
+        onOpenPlace={(id) => {
+          setCourseOpen(false)
+          setSelectedId(id)
+          openDetail(id)
+        }}
+        onClose={closeCourse}
+      />
 
       <ProfileSheet open={profileOpen} profile={profile} onApply={setProfile} onClose={closeProfile} />
     </div>
