@@ -81,6 +81,23 @@ npx --yes wrangler@4 pages deploy dist --project-name paw-map --branch main
 - 포크에서 온 PR 에는 시크릿이 전달되지 않고, 이 워크플로는 PR 에서 실행되지 않는다.
 - GitHub Actions 사용량: 공개 저장소의 표준 러너는 무료로 안내됨(🔷, GitHub 문서) — 요금 정책은 Settings → Billing 에서 확인.
 
+### 2.4 데이터 갱신 절차 (월 1회 권장, 격자 방식)
+
+0. **선행:** 격자 방식 코드가 main 에 병합·자동 배포된 뒤에 한다(예전 코드는 칸 파일을 못 읽음).
+1. 원본 받기 → `ingest/input/`
+   - 식약처 "반려동물 동반 가능 업소 현황" xlsx(식품안전나라) — 매번 새로 받는다. 받은 날 = `--mfds-date`
+   - 한국문화정보원 CSV(공공데이터포털 15111389) — 새 판이 올라왔을 때만 바꾼다. 받은 날 = `--kcisa-date`
+2. 키 확인(값은 출력하지 않음): `for k in DATA_GO_KR_SERVICE_KEY KAKAO_REST_API_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do [ -n "${!k}" ] && echo "$k 있음" || echo "$k 없음"; done`
+3. 이전 배포본 백업: `cp -r frontend/public/data/live /tmp/live-prev`
+4. 작업 폴더 비우기(캐시는 남김): `rm -rf ingest/cache/dataset` — `ingest/cache/kto_detail`(관광공사 상세)·`geocode.json`(주소→좌표)은 지우지 않는다(호출 수 절약)
+5. 가공: `cd ingest && .venv/bin/pawmap-ingest build --region all --out ../frontend/public/data/live --mfds input/<식약처>.xlsx --mfds-date <받은날> --kcisa input/<문화정보원>.csv --kcisa-date <받은날>`
+   - `[멈춤]`(관광공사 호출 상한) → 다음 날 출력된 "남은 시도만 다시: --region …" 그대로 실행(같은 명령에서 `--region` 만 바꿈). 모두 끝나야 `--out` 에 칸 파일이 만들어진다
+   - 끝에 "## 검증 - 통과", 시도별 건수가 이전과 크게 다르지 않은지(전국 동반 장소 약 7,000·반려 생활 약 20,000, 2026-10-14 기준) 확인. 시도별 보고서 `reports/ingest-*-{코드}.md`
+6. 검사·빌드·배포: `cd ../frontend && npm test && VITE_DATASET_BASE=/data/live npm run build && npm run check:secrets && npx --yes wrangler@4 pages deploy dist --project-name paw-map --branch main`
+7. 휴대폰 확인: 고정 주소 새로고침 → 아무 지역 검색, 반려 생활 → 병원 상세의 "운영 정보", 하단 출처 수집일이 바뀌었는지
+8. 문제가 있으면: `rm -rf frontend/public/data/live && cp -r /tmp/live-prev frontend/public/data/live` 후 6번 다시, 또는 Cloudflare → Pages → paw-map → Deployments → 이전 배포 Rollback
+- 이후 코드만 바뀌는 자동 배포는 이 데이터를 그대로 이어 쓴다.
+
 ---
 
 ## 3. 정기 운영
