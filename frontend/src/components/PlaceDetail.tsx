@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { conditionRows, evidenceDateText, type RowState } from '../domain/conditions'
+import { conditionRows, evidenceDateText, evidenceSummary, type RowState } from '../domain/conditions'
 import { REPORT_ISSUES_NEW_URL } from '../config/app'
 import { formatDistance } from '../domain/distance'
 import { freshness, freshnessAdvice } from '../domain/freshness'
@@ -152,15 +152,19 @@ export function PlaceDetail({ place, distance, match, favorite, onToggleFavorite
               <p className="mt-2 text-sm text-slate-500">동반 여부를 알려 주는 출처가 없어요.</p>
             ) : (
               <ul className="mt-2 space-y-2 text-sm">
-                {place.evidence.map((e, i) => (
-                  <li key={i}>
-                    <p className="font-medium">
-                      {sourceLabel[e.source]} <span className="text-xs text-slate-500">({evidenceTypeLabel[e.type]})</span> · {petStatusLabel[e.petStatus].text}
-                    </p>
-                    <p className="text-slate-600">{e.claim}</p>
-                    <p className="text-xs text-slate-500">{evidenceDateText(e)}</p>
-                  </li>
-                ))}
+                {place.evidence.map((e, i) => {
+                  const summary = evidenceSummary(e, sourceLabel[e.source])
+                  return (
+                    <li key={i}>
+                      <p className="font-medium">
+                        {sourceLabel[e.source]} <span className="text-xs text-slate-500">({evidenceTypeLabel[e.type]})</span> ·{' '}
+                        {summary.status ?? petStatusLabel[e.petStatus].text}
+                        {summary.claim && <span className="font-normal text-slate-600"> · {summary.claim}</span>}
+                      </p>
+                      <p className="text-xs text-slate-500">{evidenceDateText(e)}</p>
+                    </li>
+                  )
+                })}
               </ul>
             )}
           </section>
