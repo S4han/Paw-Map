@@ -38,7 +38,9 @@ cd /workspaces/Paw-Map
 
 # 1) 데이터 가공(안 B면 --mfds 두 인자를 뺀다)
 cd ingest && .venv/bin/pawmap-ingest build --region 50 --out ../frontend/public/data/live \
-  --mfds input/dogs_info.xlsx --mfds-date YYYY-MM-DD && cd ..
+  --mfds input/dogs_info.xlsx --mfds-date YYYY-MM-DD \
+  --kcisa input/kcisa_data.csv --kcisa-date YYYY-MM-DD && cd ..
+# --kcisa: 한국문화정보원 반려동물 동반 시설 CSV(공공데이터포털 15111389, 이용허락범위 제한 없음 — 2026-10-14 사용자 확인). --kcisa-date 는 파일을 받은 날
 
 # 2) 검사 → 빌드 → 키 노출 검사
 cd frontend

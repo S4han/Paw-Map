@@ -5,7 +5,7 @@ export type Category = 'RESTAURANT' | 'CAFE' | 'STAY' | 'ATTRACTION'
 export type PetStatus = 'ALLOWED' | 'NOT_ALLOWED' | 'UNKNOWN'
 export type MatchStatus = 'MATCH' | 'MISMATCH' | 'NEEDS_CONFIRMATION'
 export type EvidenceType = 'OFFICIAL' | 'BUSINESS_CONFIRMED' | 'PROVIDER' | 'USER_REPORT'
-export type SourceId = 'KTO_PET' | 'MFDS_PET' | 'GOOGLE' | 'MOCK'
+export type SourceId = 'KTO_PET' | 'MFDS_PET' | 'KCISA_PET' | 'GOOGLE' | 'MOCK'
 
 export interface Evidence {
   source: SourceId

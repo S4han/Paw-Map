@@ -9,6 +9,7 @@ from pathlib import Path
 from .dedupe import dedupe
 from .geocode import Geocoder
 from .models import DatasetManifest, ManifestRegion, ManifestSource, PetPlace, RegionFile
+from .sources import kcisa as kcisa_source
 from .sources import mfds as mfds_source
 from .sources.kto import BudgetExceeded, KtoSource
 
@@ -25,6 +26,8 @@ class BuildInputs:
     mfds_rows: list[mfds_source.MfdsRow] | None = None
     mfds_fetched_at: str | None = None  # 식약처 파일을 받은 날
     geocoder: Geocoder | None = None
+    kcisa_rows: list[kcisa_source.KcisaRow] | None = None
+    kcisa_fetched_at: str | None = None  # 한국문화정보원 파일을 받은 날
 
 
 @dataclass
@@ -76,14 +79,35 @@ def build_region(inp: BuildInputs) -> tuple[list[PetPlace], BuildReport, list[Ma
             report.add(f"  - 실패: {f}")
         report.add()
 
+    kcisa_places: list[PetPlace] = []
+    if inp.kcisa_rows is not None:
+        if not inp.kcisa_fetched_at:
+            raise ValueError("한국문화정보원 가공에는 파일 수집일이 필요합니다")
+        ks = kcisa_source.KcisaStats()
+        kcisa_places = kcisa_source.places(inp.kcisa_rows, inp.region_code, inp.kcisa_fetched_at, ks)
+        sources.append(ManifestSource(source="KCISA_PET", fetched_at=inp.kcisa_fetched_at, note="파일 다운로드(공공데이터포털 15111389)"))
+        used = {c: n for c, n in ks.by_category3.items() if c in kcisa_source.CATEGORY_MAP}
+        skipped = {c: n for c, n in ks.by_category3.items() if c not in kcisa_source.CATEGORY_MAP}
+        report.add("## 한국문화정보원 반려동물 동반 시설")
+        report.add(f"- 파일 {ks.rows}행 → 지역 {ks.in_region}행 → 대상 {ks.used}건(파일 내 중복 {ks.duplicates_in_file}, 좌표 없음 {len(ks.no_coords)}, 최종작성일 없음 {ks.no_date})")
+        report.add(f"- 사용한 분류 {used}")
+        report.add(f"- 제외한 분류(4개 카테고리 밖) {skipped}")
+        for w in ks.warnings:
+            report.add(f"  - 파싱 경고: {w}")
+        report.add()
+
+    # 관광공사를 기준으로 식약처를 합치고, 그 결과를 기준으로 한국문화정보원을 합친다
     merged = dedupe(kto_places, mfds_places)
+    merged3 = dedupe(merged.places, kcisa_places)
     report.add("## 출처 간 병합")
-    report.add(f"- 병합 {len(merged.merged)}건, 검토 후보(50m 이내지만 이름·주소·전화 불일치) {len(merged.review)}건")
-    for a, b in merged.merged:
-        report.add(f"  - 병합: {a} ← {b}")
-    for a, b, d in merged.review:
-        report.add(f"  - 검토: {a} ↔ {b} ({d}m)")
+    for label, m in (("관광공사 ← 식약처", merged), ("기존 ← 한국문화정보원", merged3)):
+        report.add(f"- {label}: 병합 {len(m.merged)}건, 검토 후보(50m 이내지만 이름·주소·전화 불일치) {len(m.review)}건")
+        for a, b in m.merged:
+            report.add(f"  - 병합: {a} ← {b}")
+        for a, b, d in m.review:
+            report.add(f"  - 검토: {a} ↔ {b} ({d}m)")
     report.add()
+    merged = merged3
 
     places = sorted(merged.places, key=lambda p: p.id)
     by_cat: dict[str, int] = {}
