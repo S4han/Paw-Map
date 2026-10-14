@@ -8,12 +8,14 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
+from typing import TypeVar
 
 from .models import PetConditions, PetPlace
 from .normalize import norm_address, norm_name, norm_phone
 from .rules import decide_pet_status, last_verified_at
 
 NEAR_M = 50.0
+T = TypeVar("T")
 _CONDITION_FIELDS = [
     "indoor_allowed",
     "outdoor_allowed",
@@ -52,7 +54,7 @@ class DedupeResult:
     review: list[tuple[str, str, float]] = field(default_factory=list)
 
 
-def _same_or_none(a: bool | None, b: bool | None) -> bool | None:
+def _same_or_none(a: T | None, b: T | None) -> T | None:
     """한쪽만 알면 그 값, 둘이 다르면 모름(자동으로 고르지 않음)."""
     if a is None or b is None:
         return a if b is None else b
@@ -97,6 +99,8 @@ def merge(primary: PetPlace, other: PetPlace) -> PetPlace:
             "address": primary.address or other.address,
             "phone": primary.phone or other.phone,
             "parking_available": _same_or_none(primary.parking_available, other.parking_available),
+            "opening_hours": _same_or_none(primary.opening_hours, other.opening_hours),
+            "closed_days": _same_or_none(primary.closed_days, other.closed_days),
             "evidence": evidence,
             "pet_status": status,
             "conflicting_evidence": conflict,

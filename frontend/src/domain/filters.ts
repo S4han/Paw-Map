@@ -9,6 +9,12 @@ export type CategoryTab = 'ALL' | Category
 
 const DOG_PLACES: Category[] = ['RESTAURANT', 'CAFE', 'STAY', 'ATTRACTION']
 
+// 반려 생활 세부 종류로 거르기('ALL'이면 그대로). 다른 카테고리 장소는 건드리지 않는다
+export function filterServiceType<T extends { place: Pick<PetPlace, 'category' | 'subcategory'> }>(items: T[], type: string): T[] {
+  if (type === 'ALL') return items
+  return items.filter(({ place }) => place.category !== 'PET_SERVICE' || place.subcategory === type)
+}
+
 export function categoriesForTab(tab: CategoryTab): ReadonlySet<Category> {
   return new Set(tab === 'ALL' ? DOG_PLACES : [tab])
 }

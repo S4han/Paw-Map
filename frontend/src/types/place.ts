@@ -57,6 +57,8 @@ export interface PetPlace {
   address?: string
   phone?: string
   parkingAvailable?: boolean // 출처가 준 주차 가능 여부(한국문화정보원). 없으면 모름
+  openingHours?: string // 출처 원문 그대로(한국문화정보원 '운영시간')
+  closedDays?: string // 출처 원문 그대로(한국문화정보원 '휴무일')
   imageUrl?: string
   imageCopyright?: 'Type1' | 'Type3'
   petStatus: PetStatus
