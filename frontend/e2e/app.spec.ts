@@ -63,7 +63,7 @@ test('상세: 카드로 열고 뒤로가기로 닫기', async ({ page }) => {
   await page.getByRole('button', { name: /\(가상\) 멍멍카페/ }).click()
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByRole('heading', { name: '(가상) 멍멍카페' })).toBeVisible()
-  await expect(page).toHaveURL(/#\/place\/mock%3A1$/)
+  await expect(page).toHaveURL(/#\/place\/mock%3A1%40/) // 공유 링크에 좌표가 붙음
   await expect(dialog.getByText('15kg 이하')).toBeVisible()
   await expect(dialog.getByText(/출처 수정·확인 2026-08-01 · 조회 2026-10-13/)).toBeVisible()
   await expect(dialog.getByRole('link', { name: /전화하기/ })).toHaveAttribute('href', 'tel:0640000001')

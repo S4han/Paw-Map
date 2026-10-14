@@ -104,10 +104,24 @@ class ManifestSource(Model):
     note: str | None = None
 
 
+class TileFile(Model):
+    """격자 칸 하나의 장소(동반 장소 또는 반려 생활). 칸 키는 "{위도칸}_{경도칸}"(예: 335_1265)."""
+
+    tile: str
+    version: str
+    places: list[PetPlace]
+
+
+class ManifestTile(Model):
+    key: str
+    count: int = Field(ge=0)  # 동반 장소(t/{key}.json, 0이면 파일 없음)
+    services_count: int = Field(default=0, ge=0)  # 반려 생활(t/{key}.s.json, 0이면 파일 없음)
+
+
 class ManifestRegion(Model):
     code: str
     name: str
-    file: str
+    file: str | None = None  # 시도 파일 방식에서만. 격자 방식 manifest 에서는 이름·건수·범위만 둔다
     count: int = Field(ge=0)
     bbox: tuple[float, float, float, float]
     services_file: str | None = None  # 반려 생활 시설(필요할 때만 받음)
@@ -120,3 +134,6 @@ class DatasetManifest(Model):
     is_mock: bool
     sources: list[ManifestSource]
     regions: list[ManifestRegion]
+    # 격자 방식(2026-10-14~): 브라우저는 반경에 걸치는 칸 파일만 받는다. 없으면 시도 파일 방식
+    tile_deg: float | None = Field(default=None, gt=0)
+    tiles: list[ManifestTile] | None = None

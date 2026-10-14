@@ -37,6 +37,7 @@
 cd /workspaces/Paw-Map
 
 # 1) 데이터 가공(안 B면 --mfds 두 인자를 뺀다)
+# 시도 파일은 작업 폴더(ingest/cache/dataset)에 쌓이고, 모든 시도가 끝나면 --out 에 격자 칸 파일(t/)을 만든다
 cd ingest && .venv/bin/pawmap-ingest build --region all --out ../frontend/public/data/live \
   --mfds input/dogs_info.xlsx --mfds-date YYYY-MM-DD \
   --kcisa input/kcisa_data.csv --kcisa-date YYYY-MM-DD && cd ..
@@ -56,6 +57,7 @@ npx --yes wrangler@4 pages deploy dist --project-name paw-map --branch main
 - **관광공사 호출 상한**(실행당 `--max-calls` 800, 일 1,000건 보고값 ⚠️)에 걸리면 그 시도부터 멈추고 끝난 시도 요약과 "남은 시도만 다시: --region …"을 출력한다(종료 코드 2). 끝난 시도 파일은 남는다. 다음 날 **남은 시도만** 같은 `--out` 으로 다시 실행한다(`all` 로 다시 돌리면 끝난 시도의 목록 호출을 또 써서 한도에 다시 걸릴 수 있음). 상세는 캐시(`ingest/cache/kto_detail`)를 재사용한다. 2026-10-14 첫 전국 가공: 15개 시도 완료, 강원·전북에서 멈춤. 중간 결과로 배포하면 남은 시도는 이전 데이터 그대로(또는 없음)이므로, 전국 첫 가공은 끝까지 마친 뒤 배포한다.
 - 식약처 주소→좌표 변환은 전국 약 2,800건(첫 실행만, 이후 `ingest/cache/geocode.json` 재사용). 카카오 로컬 무료량 안(❓ 콘솔 쿼터에서 확인).
 - 반려 생활 시설은 한국문화정보원 CSV(`--kcisa`)에서만 나온다. `--kcisa` 없이 가공하면 `services.*.json`이 지워진다.
+- 격자 칸만 다시 만들 때(가공 없이): `pawmap-ingest tile <시도 파일 폴더> <배포 폴더>` — 예: `tile cache/dataset ../frontend/public/data/live`.
 - **한 블록씩 실행하고, 앞 단계가 실패하면 다음 단계로 가지 않는다.** 여러 줄을 한꺼번에 붙여넣으면 뒤 명령이 앞 명령의 질문(y/n)에 입력되어 엉뚱하게 취소·진행될 수 있다(2026-10-13 발생).
 - 새 코드스페이스에는 `ingest/input/` 의 식약처 xlsx 가 없다(커밋하지 않는 파일) → 다시 올린 뒤 가공한다.
 - `public/data/live/`는 커밋하지 않지만 빌드 결과(`dist/`)에는 들어가 업로드된다 → **공개 범위(§1)를 정한 뒤에만** 실행한다.
@@ -78,6 +80,23 @@ npx --yes wrangler@4 pages deploy dist --project-name paw-map --branch main
 - **준비(한 번):** 저장소 Settings → Secrets and variables → **Actions** → New repository secret 으로 `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `VITE_KAKAO_JS_KEY` 등록. Codespaces 시크릿과는 따로 등록해야 한다. 서버 키(공공데이터·카카오 REST)는 넣지 않는다.
 - 포크에서 온 PR 에는 시크릿이 전달되지 않고, 이 워크플로는 PR 에서 실행되지 않는다.
 - GitHub Actions 사용량: 공개 저장소의 표준 러너는 무료로 안내됨(🔷, GitHub 문서) — 요금 정책은 Settings → Billing 에서 확인.
+
+### 2.4 데이터 갱신 절차 (월 1회 권장, 격자 방식)
+
+0. **선행:** 격자 방식 코드가 main 에 병합·자동 배포된 뒤에 한다(예전 코드는 칸 파일을 못 읽음).
+1. 원본 받기 → `ingest/input/`
+   - 식약처 "반려동물 동반 가능 업소 현황" xlsx(식품안전나라) — 매번 새로 받는다. 받은 날 = `--mfds-date`
+   - 한국문화정보원 CSV(공공데이터포털 15111389) — 새 판이 올라왔을 때만 바꾼다. 받은 날 = `--kcisa-date`
+2. 키 확인(값은 출력하지 않음): `for k in DATA_GO_KR_SERVICE_KEY KAKAO_REST_API_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do [ -n "${!k}" ] && echo "$k 있음" || echo "$k 없음"; done`
+3. 이전 배포본 백업: `cp -r frontend/public/data/live /tmp/live-prev`
+4. 작업 폴더 비우기(캐시는 남김): `rm -rf ingest/cache/dataset` — `ingest/cache/kto_detail`(관광공사 상세)·`geocode.json`(주소→좌표)은 지우지 않는다(호출 수 절약)
+5. 가공: `cd ingest && .venv/bin/pawmap-ingest build --region all --out ../frontend/public/data/live --mfds input/<식약처>.xlsx --mfds-date <받은날> --kcisa input/<문화정보원>.csv --kcisa-date <받은날>`
+   - `[멈춤]`(관광공사 호출 상한) → 다음 날 출력된 "남은 시도만 다시: --region …" 그대로 실행(같은 명령에서 `--region` 만 바꿈). 모두 끝나야 `--out` 에 칸 파일이 만들어진다
+   - 끝에 "## 검증 - 통과", 시도별 건수가 이전과 크게 다르지 않은지(전국 동반 장소 약 7,000·반려 생활 약 20,000, 2026-10-14 기준) 확인. 시도별 보고서 `reports/ingest-*-{코드}.md`
+6. 검사·빌드·배포: `cd ../frontend && npm test && VITE_DATASET_BASE=/data/live npm run build && npm run check:secrets && npx --yes wrangler@4 pages deploy dist --project-name paw-map --branch main`
+7. 휴대폰 확인: 고정 주소 새로고침 → 아무 지역 검색, 반려 생활 → 병원 상세의 "운영 정보", 하단 출처 수집일이 바뀌었는지
+8. 문제가 있으면: `rm -rf frontend/public/data/live && cp -r /tmp/live-prev frontend/public/data/live` 후 6번 다시, 또는 Cloudflare → Pages → paw-map → Deployments → 이전 배포 Rollback
+- 이후 코드만 바뀌는 자동 배포는 이 데이터를 그대로 이어 쓴다.
 
 ---
 

@@ -3,6 +3,7 @@
   pawmap-ingest build --region 50|11,26|all --out <데이터셋 폴더> [--mfds 식약처.xlsx --mfds-date YYYY-MM-DD]
                                          [--kcisa 한국문화정보원.csv --kcisa-date YYYY-MM-DD]
                                          관광공사·식약처·한국문화정보원 → 시도 파일 생성 + 검증 + 보고서
+  pawmap-ingest tile <시도 파일 폴더> <배포 폴더>  시도 파일 데이터셋 → 0.1도 격자 칸 파일(배포용)
   pawmap-ingest validate <데이터셋 폴더>   manifest·시도 파일의 스키마와 판정 규칙 검증
   pawmap-ingest schema [출력 파일]         데이터셋 JSON 스키마 내보내기
 
@@ -25,7 +26,14 @@ from .rules import check_place
 def validate(folder: Path) -> list[str]:
     errors: list[str] = []
     manifest = DatasetManifest.model_validate_json((folder / "manifest.json").read_text(encoding="utf-8"))
+    if manifest.tiles is not None:  # 격자 방식(배포용)
+        from .tiles import validate_tiles
+
+        return validate_tiles(folder, manifest)
     for region in manifest.regions:
+        if not region.file:
+            errors.append(f"시도 {region.code}: 파일 없음(격자 방식이 아닌데 file 이 비어 있음)")
+            continue
         data = RegionFile.model_validate_json((folder / region.file).read_text(encoding="utf-8"))
         if data.region_code != region.code:
             errors.append(f"{region.file}: regionCode {data.region_code} != manifest {region.code}")
@@ -90,6 +98,8 @@ def run_build(args: argparse.Namespace) -> int:
         base.kcisa_rows = kcisa_source.read_csv(Path(args.kcisa))
         base.kcisa_fetched_at = args.kcisa_date
 
+    # 시도 파일은 작업 폴더에 쌓고(여러 날에 나눠 가공해도 이어짐), 끝에 배포 폴더(--out)로 격자 칸 파일을 만든다.
+    work = Path(args.work_dir)
     # 시도 하나씩 가공·저장한다. 관광공사 호출 상한에 걸리면 그 시도부터 멈추고, 끝난 시도는 그대로 둔다
     # (다음 날 같은 명령을 다시 실행하면 상세는 캐시를 재사용하므로 금방 따라잡는다).
     out = Path(args.out)
@@ -103,12 +113,12 @@ def run_build(args: argparse.Namespace) -> int:
             rest = [c for c in codes if c not in done]
             print("\n".join(["# 가공 요약(중간에 멈춤)", *summary]))
             print(f"\n[멈춤] {code} {sido(code).name}: {e}")
-            print(f"남은 시도만 다시: --region {','.join(rest)} (같은 --out 폴더에 이어서 저장, 끝난 시도는 그대로)")
+            print(f"남은 시도만 다시: --region {','.join(rest)} (같은 --work-dir 에 이어서 저장, 끝난 시도는 그대로. 배포 폴더는 모두 끝난 뒤에 만든다)")
             return 2
         finally:
             if base.geocoder:
                 base.geocoder.save()
-        write_outputs(out, inp, result)
+        write_outputs(work, inp, result)
         report_path = Path(args.report_dir) / f"ingest-{inp.version}-{code}.md"
         report_path.parent.mkdir(parents=True, exist_ok=True)
         report_path.write_text(result.report.markdown(), encoding="utf-8")
@@ -118,7 +128,13 @@ def run_build(args: argparse.Namespace) -> int:
         summary.append(f"- {code} {sido(code).name}: 동반 장소 {counts.get('total', 0)}곳, 반려 생활 {len(result.services)}곳 → {report_path}")
         done.append(code)
 
-    errors = validate(out)
+    from .tiles import tile_dataset
+
+    errors = validate(work)
+    if not errors:
+        tiled = tile_dataset(work, out)
+        errors = validate(out)
+        summary.append(f"- 격자 칸 {len(tiled.tiles or [])}개 → {out}/t/ (작업 폴더: {work})")
     print("\n".join(["# 가공 요약", *summary, "", "## 검증", "- 통과" if not errors else f"- 오류 {len(errors)}건", *[f"  - {e}" for e in errors]]))
     return 1 if errors else 0
 
@@ -136,7 +152,11 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--skip-kto", action="store_true")
     b.add_argument("--max-calls", type=int, default=800, help="관광공사 실행당 호출 상한")
     b.add_argument("--cache-dir", default="cache")
+    b.add_argument("--work-dir", default="cache/dataset", help="시도 파일 방식 작업 폴더(커밋·배포하지 않음)")
     b.add_argument("--report-dir", default="../reports")
+    t = sub.add_parser("tile")
+    t.add_argument("src", type=Path, help="시도 파일 방식 데이터셋 폴더")
+    t.add_argument("out", type=Path, help="격자 방식 배포 폴더")
     v = sub.add_parser("validate")
     v.add_argument("folder", type=Path)
     s = sub.add_parser("schema")
@@ -145,6 +165,17 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "build":
         return run_build(args)
+
+    if args.cmd == "tile":
+        from .tiles import tile_dataset
+
+        tiled = tile_dataset(args.src, args.out)
+        errors = validate(args.out)
+        print(f"격자 칸 {len(tiled.tiles or [])}개, 파일 {sum((t.count > 0) + (t.services_count > 0) for t in tiled.tiles or [])}개 → {args.out}")
+        for e in errors:
+            print(f"✗ {e}")
+        print("검증 통과" if not errors else f"오류 {len(errors)}건")
+        return 1 if errors else 0
 
     if args.cmd == "validate":
         errors = validate(args.folder)

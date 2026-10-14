@@ -15,6 +15,7 @@ import { isFavorite } from './domain/favorites'
 import { categoriesForTab, filterPlaces, filterServiceType, type CategoryTab, type PetStatusFilter, type SpaceFilter } from './domain/filters'
 import { isProfileSet, matchPlace } from './domain/match'
 import { regionsForCircle } from './domain/regions'
+import { tileKey, tilesForCircle } from './domain/tiles'
 import { useManifest, useRegionPlaces } from './hooks/useDataset'
 import { useFavorites } from './hooks/useFavorites'
 import { useGeolocation } from './hooks/useGeolocation'
@@ -30,7 +31,7 @@ export default function App() {
   const { profile, setProfile } = useProfile()
   const { geo, locate } = useGeolocation()
   const { favorites, toggle: toggleFavorite } = useFavorites()
-  const { placeId, open: openDetail, close: closeDetail } = usePlaceRoute()
+  const { placeId, placeAt, open: openDetail, close: closeDetail } = usePlaceRoute()
 
   const [center, setCenter] = useState<SearchCenter>({ ...DEFAULT_CENTER, label: '제주시청(기본 위치)' })
   const [fitKey, setFitKey] = useState(0) // 새 검색마다 증가 → 지도를 반경에 맞춤
@@ -47,7 +48,17 @@ export default function App() {
   const [listMode, setListMode] = useState<'results' | 'favorites'>('results')
   const [courseOpen, setCourseOpen] = useState(false)
 
-  const regionCodes = useMemo(() => (manifest ? regionsForCircle(manifest, center, radius) : []), [manifest, center, radius])
+  // 받을 단위: 격자 방식이면 반경에 걸치는 칸, 예전 방식이면 시도. 공유 링크로 연 장소가 반경 밖이면 그 칸도 받는다
+  const regionCodes = useMemo(() => {
+    if (!manifest) return []
+    if (!manifest.tiles || !manifest.tileDeg) return regionsForCircle(manifest, center, radius)
+    const keys = tilesForCircle(manifest, center, radius)
+    if (placeAt) {
+      const k = tileKey(placeAt.lat, placeAt.lng, manifest.tileDeg)
+      if (!keys.includes(k) && manifest.tiles.some((t) => t.key === k)) keys.push(k)
+    }
+    return keys
+  }, [manifest, center, radius, placeAt])
   // 반려 생활 파일은 그 카테고리를 켰거나 저장한 곳에 반려 생활 시설이 있을 때만 받는다
   const needServices = tab === 'PET_SERVICE' || favorites.some((f) => f.category === 'PET_SERVICE')
   const placesState = useRegionPlaces(manifest, regionCodes, needServices)
@@ -206,7 +217,7 @@ export default function App() {
                   selected={false}
                   favorite={isFavorite(favorites, selectedPlace.place.id)}
                   onToggleFavorite={() => toggleFavorite(selectedPlace.place)}
-                  onSelect={() => openDetail(selectedPlace.place.id)}
+                  onSelect={() => openDetail(selectedPlace.place.id, { lat: selectedPlace.place.latitude, lng: selectedPlace.place.longitude })}
                 />
               </ul>
             )}
@@ -262,7 +273,7 @@ export default function App() {
                               onToggleFavorite={() => toggleFavorite(place)}
                               onSelect={() => {
                                 setSelectedId(place.id)
-                                openDetail(place.id)
+                                openDetail(place.id, { lat: place.latitude, lng: place.longitude })
                               }}
                             />
                           ) : (
@@ -343,7 +354,7 @@ export default function App() {
                             onToggleFavorite={() => toggleFavorite(place)}
                             onSelect={() => {
                               setSelectedId(place.id)
-                              openDetail(place.id)
+                              openDetail(place.id, { lat: place.latitude, lng: place.longitude })
                             }}
                           />
                         ))}
@@ -403,7 +414,8 @@ export default function App() {
         onOpenPlace={(id) => {
           setCourseOpen(false)
           setSelectedId(id)
-          openDetail(id)
+          const p = allPlaces.find((x) => x.id === id)
+          openDetail(id, p && { lat: p.latitude, lng: p.longitude })
         }}
         onClose={closeCourse}
       />

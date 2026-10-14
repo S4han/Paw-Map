@@ -220,3 +220,33 @@ def test_hours_and_closed_days_kept_as_source_text():
     assert (out[1].opening_hours, out[1].closed_days) == (None, None)
     rec = dict.fromkeys(HEADER, "") | {"시설명": "x", "운영시간": "10:00~18:00"}
     assert parse_rows([rec])[0].hours == "10:00~18:00"
+
+
+def test_tile_dataset_and_validate(tmp_path):
+    """시도 파일 데이터셋 → 0.1도 격자 칸 파일, 칸 경계·건수·반려 생활 분리 검증."""
+    from pawmap_ingest.build import write_outputs
+    from pawmap_ingest.cli import validate
+    from pawmap_ingest.tiles import tile_bounds, tile_dataset, tile_key
+
+    assert tile_key(33.5, 126.53) == "335_1265" and tile_key(0.3, 0.3) == "3_3"
+    assert tile_bounds("335_1265") == (33.5, 126.5, 33.6, 126.6)
+
+    work, out = tmp_path / "work", tmp_path / "live"
+    inp = BuildInputs(region_code="50", version="20261014", fetched_at="2026-10-14T09:00:00+09:00",
+                      kcisa_rows=[row(), row(name="먼카페", category3="카페", lat="33.25", lng="126.56", road_address="서귀포 1"),
+                                  row(name="가상병원", category3="동물병원", road_address="제주시 9")],
+                      kcisa_fetched_at="2026-10-14")
+    write_outputs(work, inp, build_region(inp))
+    (out / "places.50.json").parent.mkdir(parents=True)
+    (out / "places.50.json").write_text("{}")  # 예전 시도 파일은 지워져야 함
+    tiled = tile_dataset(work, out)
+    assert validate(out) == []
+    assert not (out / "places.50.json").exists()
+    assert {t.key: (t.count, t.services_count) for t in tiled.tiles} == {"332_1265": (1, 0), "335_1265": (1, 1)}
+    assert (out / "t" / "335_1265.s.json").exists() and not (out / "t" / "332_1265.s.json").exists()
+    manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["tileDeg"] == 0.1 and "file" not in manifest["regions"][0]
+
+    # 칸 파일을 건드리면 검증이 잡는다
+    (out / "t" / "332_1265.json").unlink()
+    assert any("파일 없음" in e for e in validate(out))

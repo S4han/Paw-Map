@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { loadManifest, loadRegion } from '../services/dataset'
+import { loadManifest, loadUnit } from '../services/dataset'
 import type { DatasetManifest, PetPlace } from '../types/place'
 
 type ManifestState =
@@ -26,7 +26,8 @@ type PlacesState =
   | { status: 'error'; message: string }
   | { status: 'ready'; places: PetPlace[] }
 
-// 시도 파일은 한 번 받으면 메모리에 둔다. 필터·프로필 변경, 같은 지역 안의 재검색은 네트워크를 쓰지 않는다.
+// 받는 단위: 격자 방식이면 칸 키, 예전 시도 파일 방식이면 시도 코드(manifest 로 판단).
+// 받은 파일은 메모리에 둔다. 필터·프로필 변경, 같은 지역 안의 재검색은 네트워크를 쓰지 않는다.
 const cache = new Map<string, Promise<PetPlace[]>>()
 
 // includeServices: 반려 생활 카테고리를 켰을 때만 그 파일도 받는다(꺼져 있으면 네트워크를 쓰지 않음)
@@ -40,7 +41,7 @@ export function useRegionPlaces(manifest: DatasetManifest | null, codes: string[
     const load = (code: string, kind: 'places' | 'services' = 'places') => {
       const cacheKey = `${manifest.version}:${kind}:${code}`
       if (!cache.has(cacheKey)) {
-        const p = loadRegion(manifest, code, fetch, undefined, kind)
+        const p = loadUnit(manifest, code, kind)
         p.catch(() => cache.delete(cacheKey)) // 실패는 캐시하지 않아 재시도가 가능하게
         cache.set(cacheKey, p)
       }
