@@ -1,31 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { LatLng } from '../domain/distance'
+import { parsePlaceHash, placeHash, type PlaceRoute } from './placeHash'
 
-// 상세 화면 주소: #/place/{id}. 해시를 쓰면 정적 호스팅에서도 새로고침·공유·뒤로가기가 동작한다(서버 없음, 안 A).
-const PREFIX = '#/place/'
-
-function readHash(): string | null {
-  const h = window.location.hash
-  return h.startsWith(PREFIX) ? decodeURIComponent(h.slice(PREFIX.length)) : null
-}
+const readHash = () => parsePlaceHash(window.location.hash)
 
 export function usePlaceRoute() {
-  const [placeId, setPlaceId] = useState<string | null>(readHash)
+  const [route, setRoute] = useState<PlaceRoute | null>(readHash)
   // 앱 안에서 연 상세만 뒤로가기로 닫는다. 공유 링크로 바로 들어온 경우 뒤로가기는 사이트를 떠나므로 해시만 지운다.
   const openedInApp = useRef(false)
 
   useEffect(() => {
     const onChange = () => {
-      const id = readHash()
-      if (!id) openedInApp.current = false
-      setPlaceId(id)
+      const next = readHash()
+      if (!next) openedInApp.current = false
+      setRoute(next)
     }
     window.addEventListener('hashchange', onChange)
     return () => window.removeEventListener('hashchange', onChange)
   }, [])
 
-  const open = useCallback((id: string) => {
+  const open = useCallback((id: string, at?: LatLng) => {
     openedInApp.current = true
-    window.location.hash = `${PREFIX}${encodeURIComponent(id)}`
+    window.location.hash = placeHash(id, at)
   }, [])
 
   const close = useCallback(() => {
@@ -34,8 +30,8 @@ export function usePlaceRoute() {
       return
     }
     window.history.replaceState(null, '', window.location.pathname + window.location.search)
-    setPlaceId(null)
+    setRoute(null)
   }, [])
 
-  return { placeId, open, close }
+  return { placeId: route?.id ?? null, placeAt: route?.at, open, close }
 }

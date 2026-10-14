@@ -13,7 +13,6 @@
   {
    "code": "50",
    "name": "제주",
-   "file": "places.50.json",
    "count": 10,
    "bbox": [
     33.1,
@@ -21,8 +20,20 @@
     33.6,
     127.0
    ],
-   "servicesFile": "services.50.json",
    "servicesCount": 2
+  }
+ ],
+ "tileDeg": 0.1,
+ "tiles": [
+  {
+   "key": "334_1265",
+   "count": 5,
+   "servicesCount": 1
+  },
+  {
+   "key": "335_1265",
+   "count": 5,
+   "servicesCount": 1
   }
  ]
 }

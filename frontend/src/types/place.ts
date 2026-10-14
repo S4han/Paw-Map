@@ -90,10 +90,19 @@ export interface DatasetManifest {
   regions: {
     code: string
     name: string
-    file: string
+    file?: string // 시도 파일 방식에서만
     count: number
     bbox: [minLat: number, minLng: number, maxLat: number, maxLng: number]
     servicesFile?: string // 반려 생활 시설(그 카테고리를 켰을 때만 받음)
     servicesCount?: number
   }[]
+  // 격자 방식: 반경에 걸치는 칸 파일(t/{key}.json, 반려 생활은 t/{key}.s.json)만 받는다
+  tileDeg?: number
+  tiles?: { key: string; count: number; servicesCount: number }[]
+}
+
+export interface TileFile {
+  tile: string
+  version: string
+  places: PetPlace[]
 }

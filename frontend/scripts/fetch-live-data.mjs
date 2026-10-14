@@ -27,12 +27,19 @@ if (manifest.isMock) throw new Error('운영 사이트의 데이터가 가상 �
 
 mkdirSync(out, { recursive: true })
 writeFileSync(out + 'manifest.json', manifestText)
-for (const region of manifest.regions) {
-  const files = [[region.file, region.count], ...(region.servicesFile ? [[region.servicesFile, region.servicesCount]] : [])]
-  for (const [file, count] of files) {
-    if (!/^[\w.-]+\.json$/.test(file)) throw new Error(`이상한 파일 이름: ${file}`)
-    writeFileSync(out + file, await get(file))
-    console.log(`✓ ${file} (${count}곳)`)
-  }
+// 받을 파일 목록: 격자 방식이면 t/{칸}.json·t/{칸}.s.json, 예전 방식이면 시도 파일
+const files = manifest.tiles
+  ? manifest.tiles.flatMap((t) => [...(t.count > 0 ? [`t/${t.key}.json`] : []), ...(t.servicesCount > 0 ? [`t/${t.key}.s.json`] : [])])
+  : manifest.regions.flatMap((r) => [r.file, ...(r.servicesFile ? [r.servicesFile] : [])])
+if (manifest.tiles) mkdirSync(out + 't', { recursive: true })
+// 동시에 8개씩 받는다(칸 파일이 수천 개라 하나씩 받으면 느림)
+for (let i = 0; i < files.length; i += 8) {
+  await Promise.all(
+    files.slice(i, i + 8).map(async (file) => {
+      if (!/^(t\/)?[\w.-]+\.json$/.test(file)) throw new Error(`이상한 파일 이름: ${file}`)
+      writeFileSync(out + file, await get(file))
+    }),
+  )
 }
+console.log(`✓ 파일 ${files.length}개${manifest.tiles ? ` (격자 칸 ${manifest.tiles.length}개)` : ''}`)
 console.log(`실데이터 받음: ${base} · 생성 ${manifest.generatedAt}`)
