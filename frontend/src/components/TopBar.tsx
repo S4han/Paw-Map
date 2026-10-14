@@ -1,10 +1,11 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { searchKeyword, type SearchCandidate } from '../services/kakaoSearch'
 
 type Props = {
   locating: boolean
   onLocate: () => void
   onPick: (c: SearchCandidate) => void
+  resetKey: number // 바뀌면(내 위치로 이동) 검색어·후보를 비운다
 }
 
 type SearchState =
@@ -14,9 +15,14 @@ type SearchState =
   | { status: 'error'; message: string }
 
 // 상단 바: 로고 · 지역 검색(버튼/Enter 로만 호출) · 현재 위치
-export function TopBar({ locating, onLocate, onPick }: Props) {
+export function TopBar({ locating, onLocate, onPick, resetKey }: Props) {
   const [query, setQuery] = useState('')
   const [search, setSearch] = useState<SearchState>({ status: 'idle' })
+
+  useEffect(() => {
+    setQuery('')
+    setSearch({ status: 'idle' })
+  }, [resetKey])
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()

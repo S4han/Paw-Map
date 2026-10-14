@@ -47,6 +47,7 @@ export default function App() {
   const [matchFilter, setMatchFilter] = useState<MatchFilterValue>('ALL')
   const [listMode, setListMode] = useState<'results' | 'favorites'>('results')
   const [courseOpen, setCourseOpen] = useState(false)
+  const [searchResetKey, setSearchResetKey] = useState(0) // ◎로 내 위치에 옮기면 증가 → 검색창의 예전 지역 이름을 비운다
 
   // 받을 단위: 격자 방식이면 반경에 걸치는 칸, 예전 방식이면 시도. 공유 링크로 연 장소가 반경 밖이면 그 칸도 받는다
   const regionCodes = useMemo(() => {
@@ -119,11 +120,18 @@ export default function App() {
     setSelectedId(undefined)
     setFitKey((k) => k + 1)
   }, [])
+  const moveToMe = useCallback(
+    (pos: LatLng) => {
+      moveTo({ ...pos, label: '내 위치' })
+      setSearchResetKey((k) => k + 1)
+    },
+    [moveTo],
+  )
 
   const onLocate = async () => {
     movedByUser.current = false
     const pos = await locate()
-    if (pos && !movedByUser.current) moveTo({ ...pos, label: '내 위치' })
+    if (pos && !movedByUser.current) moveToMe(pos)
   }
   const onPick = (c: SearchCandidate) => {
     movedByUser.current = true
@@ -157,7 +165,7 @@ export default function App() {
 
   return (
     <div className="mx-auto flex h-dvh max-w-xl flex-col bg-slate-50 text-slate-900">
-      <TopBar locating={geo.status === 'locating'} onLocate={onLocate} onPick={onPick} />
+      <TopBar locating={geo.status === 'locating'} onLocate={onLocate} onPick={onPick} resetKey={searchResetKey} />
       <FilterBar
         tab={tab}
         onTab={(t) => {
