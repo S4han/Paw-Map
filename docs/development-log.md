@@ -96,3 +96,4 @@
 - 실기기 확인(사용자, paw-map.pages.dev): 앱을 열면 위치 허용 창이 뜨고, 허용 후 "내 위치 기준"으로 검색됨 → 현재 위치 검색 해결
 - 자동 배포 추가: GitHub Actions(main 푸시·수동 실행) → 테스트·운영 실데이터 받기·검증·빌드·키 검사·Pages 배포. 실데이터는 커밋하지 않는 원칙 유지 → 운영 사이트의 현재 데이터를 이어 씀, 데이터 갱신은 수동. 로컬 서버로 데이터 받기 스크립트 확인
 - 자동 배포 첫 실행(PR #1 병합) 실패: `paw-map.pages.dev/data/live/manifest.json` 이 JSON 이 아닌 HTML 을 돌려줌 → 이 주소에 실데이터가 없음(다른 사이트이거나 프로젝트 주소가 다름). 주소를 적어두지 않고 Cloudflare API 의 프로젝트 `subdomain` 을 읽도록 수정, HTML 응답 시 원인 안내. 이전 "배포 주소 변경" 기록은 확인되지 않은 보고라 문서의 주소를 프로젝트 `subdomain` 기준으로 되돌림
+- 사용자 확인: 프로젝트 주소는 `paw-map-1bi.pages.dev` 가 맞음(`paw-map.pages.dev` 는 우리 프로젝트가 아님). 자동 배포는 Cloudflare 의 `subdomain` 으로 이 주소를 읽음

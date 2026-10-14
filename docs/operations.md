@@ -27,7 +27,7 @@
 1. Cloudflare 가입 → **Workers & Pages → Create → Pages → Direct Upload** 로 프로젝트 `paw-map` 생성(빈 폴더 업로드 없이 이름만 만들어도 됨).
 2. Cloudflare **API 토큰** 생성: My Profile → API Tokens → Create Token → "Edit Cloudflare Workers" 템플릿 또는 사용자 지정(권한: Account · Cloudflare Pages · Edit). 
 3. GitHub 저장소 Settings → Secrets → **Codespaces** 에 `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`(Cloudflare 대시보드 오른쪽의 Account ID), `VITE_KAKAO_JS_KEY` 등록 → 코드스페이스 재시작.
-4. 카카오 콘솔 → 앱 → 플랫폼 키 → JavaScript SDK 도메인에 **실제 배포 주소** 추가. `pages.dev` 이름은 전 세계에서 하나라 이미 쓰인 경우 뒤에 문자가 붙는다(2026-10-13 배포 출력: `https://paw-map-1bi.pages.dev`). 정확한 주소는 아래 명령의 `subdomain` 으로 확인한다:
+4. 카카오 콘솔 → 앱 → 플랫폼 키 → JavaScript SDK 도메인에 **실제 배포 주소** 추가. `pages.dev` 이름은 전 세계에서 하나라 이미 쓰인 경우 뒤에 문자가 붙는다(실제: `https://paw-map-1bi.pages.dev`, 2026-10-14 사용자 확인). 정확한 주소는 아래 명령의 `subdomain` 으로 확인한다:
    `curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/paw-map" | python3 -c "import sys,json; print(json.load(sys.stdin)['result']['subdomain'])"`. 첫 배포 출력·Pages 프로젝트 화면의 주소를 그대로 등록한다.
 5. (안 C) Cloudflare Zero Trust → Access → Applications → Self-hosted → 도메인 = 프로젝트 주소, 정책: 본인 이메일만 Allow.
 
