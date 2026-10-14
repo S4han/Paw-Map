@@ -148,7 +148,7 @@ def write_outputs(out_dir: Path, inp: BuildInputs, result: BuildResult) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     file_name = f"places.{inp.region_code}.json"
     region = RegionFile(region_code=inp.region_code, version=inp.version, places=places)
-    (out_dir / file_name).write_text(region.model_dump_json(by_alias=True, exclude_none=True, indent=1), encoding="utf-8")
+    (out_dir / file_name).write_text(region.model_dump_json(by_alias=True, exclude_none=True), encoding="utf-8")  # 전국 확대로 크기가 커져 들여쓰기 없이 저장
     services_name = f"services.{inp.region_code}.json"
     if services:
         data = RegionFile(region_code=inp.region_code, version=inp.version, places=services)
