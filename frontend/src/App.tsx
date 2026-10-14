@@ -8,11 +8,11 @@ import { PlaceCard } from './components/PlaceCard'
 import { PlaceDetail } from './components/PlaceDetail'
 import { ProfileSheet } from './components/ProfileSheet'
 import { TopBar } from './components/TopBar'
-import { DEFAULT_CENTER, DEFAULT_RADIUS, type SearchRadius } from './config/app'
+import { DEFAULT_CENTER, DEFAULT_RADIUS, serviceTypes, type SearchRadius } from './config/app'
 import { buildCourse } from './domain/course'
 import { distanceMeters, type LatLng } from './domain/distance'
 import { isFavorite } from './domain/favorites'
-import { categoriesForTab, filterPlaces, type CategoryTab, type PetStatusFilter, type SpaceFilter } from './domain/filters'
+import { categoriesForTab, filterPlaces, filterServiceType, type CategoryTab, type PetStatusFilter, type SpaceFilter } from './domain/filters'
 import { isProfileSet, matchPlace } from './domain/match'
 import { regionsForCircle } from './domain/regions'
 import { useManifest, useRegionPlaces } from './hooks/useDataset'
@@ -36,6 +36,7 @@ export default function App() {
   const [fitKey, setFitKey] = useState(0) // 새 검색마다 증가 → 지도를 반경에 맞춤
   const [tab, setTab] = useState<CategoryTab>('ALL') // '전체'는 동반 장소 4종, 반려 생활은 따로 골라야 보임
   const selectedCats = useMemo(() => categoriesForTab(tab), [tab])
+  const [serviceType, setServiceType] = useState('ALL') // 반려 생활 탭 안의 세부 종류(병원·약국·미용·용품)
   const [space, setSpace] = useState<SpaceFilter>('ANY')
   const [view, setView] = useState<'list' | 'map'>('list') // 목록이 기본, 지도는 버튼으로 전환
   const [radius, setRadius] = useState<SearchRadius>(DEFAULT_RADIUS)
@@ -58,7 +59,10 @@ export default function App() {
 
   // 프로필 변경은 네트워크 없이 매칭만 다시 계산한다(아키텍처 §7)
   const profileOn = isProfileSet(profile)
-  const matched = useMemo(() => results.map((r) => ({ ...r, match: matchPlace(r.place, profile) })), [results, profile])
+  const matched = useMemo(
+    () => filterServiceType(results, serviceType).map((r) => ({ ...r, match: matchPlace(r.place, profile) })),
+    [results, serviceType, profile],
+  )
   const matchCounts = useMemo(() => {
     const counts: Record<MatchFilterValue, number> = { ALL: matched.length, MATCH: 0, NEEDS_CONFIRMATION: 0, MISMATCH: 0 }
     for (const m of matched) if (m.match) counts[m.match.status] += 1
@@ -145,7 +149,10 @@ export default function App() {
       <TopBar locating={geo.status === 'locating'} onLocate={onLocate} onPick={onPick} />
       <FilterBar
         tab={tab}
-        onTab={setTab}
+        onTab={(t) => {
+          setTab(t)
+          setServiceType('ALL')
+        }}
         centerLabel={center.label}
         onLocationChip={() => document.getElementById('region-search')?.focus()}
         space={space}
@@ -283,6 +290,22 @@ export default function App() {
                       <p className="mb-2 rounded-lg bg-sky-50 px-3 py-1.5 text-xs text-sky-900" role="note">
                         ⓘ 반려견 동반 숙소 공식 정보가 아직 적어요. 예약 전 숙소에 꼭 확인하세요.
                       </p>
+                    )}
+                    {tab === 'PET_SERVICE' && (
+                      <div className="mb-2 flex gap-2 overflow-x-auto" role="group" aria-label="반려 생활 종류">
+                        {[{ id: 'ALL', name: '전체', icon: '' }, ...serviceTypes].map((t) => (
+                          <button
+                            key={t.id}
+                            type="button"
+                            aria-pressed={serviceType === t.id}
+                            onClick={() => setServiceType(t.id)}
+                            className={`h-9 shrink-0 rounded-full px-3 text-sm font-medium ring-1 ${serviceType === t.id ? 'bg-slate-900 text-white ring-slate-900' : 'bg-white text-slate-700 ring-slate-200'}`}
+                          >
+                            {t.icon && `${t.icon} `}
+                            {t.name}
+                          </button>
+                        ))}
+                      </div>
                     )}
                     {tab === 'PET_SERVICE' && (
                       <p className="mb-2 rounded-lg bg-sky-50 px-3 py-1.5 text-xs text-sky-900" role="note">

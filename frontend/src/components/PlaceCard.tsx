@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { categories } from '../config/app'
+import { categories, serviceTypes } from '../config/app'
 import { cardTags, shortRegion, type CardTag } from '../domain/conditions'
 import { formatDistance } from '../domain/distance'
 import { freshness } from '../domain/freshness'
@@ -23,7 +23,8 @@ const tagTone: Record<CardTag['tone'], string> = {
   muted: 'bg-slate-100 text-slate-500',
   warn: 'bg-amber-50 text-amber-800',
 }
-const icon = Object.fromEntries(categories.map((c) => [c.id, c.icon]))
+const icon: Record<string, string> = Object.fromEntries(categories.map((c) => [c.id, c.icon]))
+const serviceIcon: Record<string, string> = Object.fromEntries(serviceTypes.map((t) => [t.id, t.icon]))
 
 // 장소 카드: 왼쪽 사진(없으면 카테고리 아이콘) + ♡ 저장, 오른쪽 이름·지역·거리·태그·판정.
 // 누르면 선택(지도 이름표) + 상세 화면
@@ -51,7 +52,7 @@ export function PlaceCard({ place, distance, selected, match, favorite, onToggle
         className={`flex w-full gap-3 rounded-2xl bg-white p-3 text-left ring-1 ${selected ? 'ring-2 ring-orange-400' : 'ring-slate-200'}`}
       >
         <span className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-xl bg-orange-50 text-3xl" aria-hidden="true">
-          {image ? <img src={image} alt="" onError={() => setImageOk(false)} className="h-full w-full object-cover" loading="lazy" /> : icon[place.category]}
+          {image ? <img src={image} alt="" onError={() => setImageOk(false)} className="h-full w-full object-cover" loading="lazy" /> : (place.subcategory && serviceIcon[place.subcategory]) || icon[place.category]}
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate font-semibold">{place.name}</span>

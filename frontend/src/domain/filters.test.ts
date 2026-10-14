@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Category, PetPlace, PetStatus } from '../types/place'
-import { categoriesForTab, filterPlaces } from './filters'
+import { categoriesForTab, filterPlaces, filterServiceType } from './filters'
 
 const center = { lat: 33.4996, lng: 126.5312 }
 const all = new Set<Category>(['RESTAURANT', 'CAFE', 'STAY', 'ATTRACTION'])
@@ -58,5 +58,14 @@ describe('카테고리 탭·공간 필터', () => {
     expect(ids('ANY')).toHaveLength(3)
     expect(ids('INDOOR')).toEqual(['true-undefined'])
     expect(ids('OUTDOOR')).toEqual(['false-true'])
+  })
+})
+
+describe('반려 생활 세부 종류', () => {
+  it('고른 종류의 반려 생활만 남기고 다른 카테고리는 그대로', () => {
+    const item = (id: string, category: Category, subcategory?: string) => ({ place: { ...place(id, 0, category), subcategory } })
+    const items = [item('병원', 'PET_SERVICE', '동물병원'), item('미용', 'PET_SERVICE', '미용'), item('카페', 'CAFE')]
+    expect(filterServiceType(items, 'ALL')).toHaveLength(3)
+    expect(filterServiceType(items, '동물병원').map((x) => x.place.id)).toEqual(['병원', '카페'])
   })
 })

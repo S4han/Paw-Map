@@ -131,6 +131,15 @@ test('반려 생활: 전체 탭에는 없고, 반려 생활 탭에서 세부 분
   await expect(summary(page)).toContainText('2곳')
   await expect(page.getByRole('button', { name: /\(가상\) 한라동물병원/ })).toContainText('반려 생활 · 동물병원')
   await expect(page.getByText(/반려 생활은 동반 장소가 아니라/)).toBeVisible()
+
+  // 종류 칩으로 병원만
+  await page.getByRole('group', { name: '반려 생활 종류' }).getByRole('button', { name: /동물병원/ }).click()
+  await expect(summary(page)).toContainText('1곳')
+  await expect(page.getByText('(가상) 멍멍미용실')).toHaveCount(0)
+  // 다른 탭으로 갔다 오면 종류 선택은 처음(전체)으로
+  await page.getByRole('tab', { name: '전체' }).click()
+  await page.getByRole('tab', { name: /반려 생활/ }).click()
+  await expect(summary(page)).toContainText('2곳')
 })
 
 test('카드: 크기 태그·♡ 저장', async ({ page }) => {
