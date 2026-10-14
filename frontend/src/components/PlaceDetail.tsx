@@ -31,6 +31,8 @@ export function PlaceDetail({ place, distance, match, favorite, onToggleFavorite
   const image = imageOk ? secureImageUrl(place.imageUrl) : null
   const fresh = freshness(place)
   const advice = freshnessAdvice(fresh)
+  // 운영시간·휴무일·주차는 지금은 한국문화정보원 자료에서만 온다
+  const hoursSource = place.evidence.find((e) => e.source === 'KCISA_PET')
 
   useEffect(() => {
     closeRef.current?.focus()
@@ -176,6 +178,28 @@ export function PlaceDetail({ place, distance, match, favorite, onToggleFavorite
             ⚠️ 동반 조건은 바뀔 수 있어요. 방문 전에 업체에 꼭 확인하세요.
             {place.category === 'STAY' && ' 예약 가능 여부·객실 조건은 예약 사이트나 숙소에서 확인해야 해요.'}
           </p>
+
+          {(place.openingHours || place.closedDays || place.parkingAvailable !== undefined) && (
+            <section className="rounded-2xl bg-white p-4 ring-1 ring-slate-200" aria-labelledby="hours-title">
+              <h3 id="hours-title" className="font-semibold">
+                운영 정보
+              </h3>
+              <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                <dt className="text-slate-500">운영시간</dt>
+                <dd className={place.openingHours ? '' : 'text-slate-400'}>{place.openingHours ?? '정보 없음'}</dd>
+                <dt className="text-slate-500">휴무일</dt>
+                <dd className={place.closedDays ? '' : 'text-slate-400'}>{place.closedDays ?? '정보 없음'}</dd>
+                <dt className="text-slate-500">주차</dt>
+                <dd className={place.parkingAvailable === undefined ? 'text-slate-400' : ''}>
+                  {place.parkingAvailable === undefined ? '정보 없음' : place.parkingAvailable ? '가능' : '불가'}
+                </dd>
+              </dl>
+              <p className="mt-2 text-xs text-slate-500">
+                {hoursSource ? `${sourceLabel[hoursSource.source]} 자료${hoursSource.checkedAt ? ` · 작성 ${hoursSource.checkedAt.slice(0, 10)}` : ''}. ` : ''}
+                바뀌었을 수 있으니 {place.category === 'PET_SERVICE' ? '진료·영업 여부는' : '방문 전'} 전화로 확인하세요.
+              </p>
+            </section>
+          )}
 
           <section className="space-y-2" aria-label="연락·길찾기">
             {place.address && (

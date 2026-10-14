@@ -65,6 +65,8 @@ class KcisaRow:
     fee: str
     updated: str
     parking: str = ""  # 선택 열: '주차 가능여부'(값 형식 ❓ — Y/N 만 값으로 바꾼다)
+    hours: str = ""  # 선택 열: '운영시간'(원문 그대로)
+    closed: str = ""  # 선택 열: '휴무일'(원문 그대로)
 
 
 _COLUMNS = {
@@ -109,7 +111,7 @@ def parse_rows(records: list[dict[str, str]]) -> list[KcisaRow]:
     rows = []
     for r in records:
         clean = {k.strip(): (v or "").strip() for k, v in r.items() if k}
-        rows.append(KcisaRow(**{attr: clean[col] for attr, col in _COLUMNS.items()}, parking=clean.get("주차 가능여부", "")))
+        rows.append(KcisaRow(**{attr: clean[col] for attr, col in _COLUMNS.items()}, parking=clean.get("주차 가능여부", ""), hours=clean.get("운영시간", ""), closed=clean.get("휴무일", "")))
     return rows
 
 
@@ -182,6 +184,15 @@ def parse_conditions(row: KcisaRow) -> ParsedKcisa:
     elif fee not in _EMPTY:
         out.notes.append(f"추가 요금: {fee}")
     return out
+
+
+_NO_INFO = _EMPTY | {"정보없음", "정보 없음", "없음", "N"}
+
+
+def _text(value: str) -> str | None:
+    """원문 그대로 두되 비었거나 '정보없음'류면 모름(None)."""
+    v = re.sub(r"\s+", " ", value).strip()
+    return None if v in _NO_INFO else v
 
 
 def checked_date(updated: str) -> str | None:
@@ -267,6 +278,8 @@ def split_places(rows: list[KcisaRow], region_code: str, fetched_at: str, stats:
             address=address,
             phone=row.phone if norm_phone(row.phone) else None,
             parking_available={"Y": True, "N": False}.get(row.parking),
+            opening_hours=_text(row.hours),
+            closed_days=_text(row.closed),
             pet_status=status,
             pet_conditions=PetConditions(
                 **parsed.values,  # type: ignore[arg-type]

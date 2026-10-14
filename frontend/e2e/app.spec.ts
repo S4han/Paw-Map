@@ -136,6 +136,13 @@ test('반려 생활: 전체 탭에는 없고, 반려 생활 탭에서 세부 분
   await page.getByRole('group', { name: '반려 생활 종류' }).getByRole('button', { name: /동물병원/ }).click()
   await expect(summary(page)).toContainText('1곳')
   await expect(page.getByText('(가상) 멍멍미용실')).toHaveCount(0)
+  // 병원 상세: 운영시간·휴무일은 출처 원문 그대로, 주차는 정보 없음
+  await page.getByRole('button', { name: /\(가상\) 한라동물병원/ }).click()
+  const detail = page.getByRole('dialog')
+  await expect(detail.getByText('09:00~21:00 (가상)')).toBeVisible()
+  await expect(detail.getByText('일요일 (가상)')).toBeVisible()
+  await expect(detail.getByText(/진료·영업 여부는 전화로 확인하세요/)).toBeVisible()
+  await page.goBack()
   // 다른 탭으로 갔다 오면 종류 선택은 처음(전체)으로
   await page.getByRole('tab', { name: '전체' }).click()
   await page.getByRole('tab', { name: /반려 생활/ }).click()

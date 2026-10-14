@@ -79,6 +79,8 @@ class PetPlace(Model):
     address: str | None = None
     phone: str | None = None
     parking_available: bool | None = None  # 출처가 준 주차 가능 여부(한국문화정보원). 없으면 모름
+    opening_hours: str | None = None  # 출처 원문 그대로(해석하지 않음) — 한국문화정보원 '운영시간'
+    closed_days: str | None = None  # 출처 원문 그대로 — 한국문화정보원 '휴무일'
     image_url: str | None = None
     image_copyright: Literal["Type1", "Type3"] | None = None
     pet_status: PetStatus

@@ -27,7 +27,9 @@
     }
    ],
    "conflictingEvidence": false,
-   "lastVerifiedAt": "2025-03-24"
+   "lastVerifiedAt": "2025-03-24",
+   "openingHours": "09:00~21:00 (가상)",
+   "closedDays": "일요일 (가상)"
   },
   {
    "id": "mock:s2",

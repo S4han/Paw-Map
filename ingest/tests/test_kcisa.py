@@ -209,3 +209,14 @@ def test_merge_parking_conflict_becomes_unknown():
 
     assert _same_or_none(None, True) is True and _same_or_none(False, None) is False
     assert _same_or_none(True, True) is True and _same_or_none(True, False) is None
+
+
+def test_hours_and_closed_days_kept_as_source_text():
+    out = kcisa.places(
+        [row(hours="09:00~21:00", closed="일요일"), row(name="b", hours=" 정보없음 ", closed="", road_address="x2")],
+        "50", "d", kcisa.KcisaStats(),
+    )
+    assert (out[0].opening_hours, out[0].closed_days) == ("09:00~21:00", "일요일")
+    assert (out[1].opening_hours, out[1].closed_days) == (None, None)
+    rec = dict.fromkeys(HEADER, "") | {"시설명": "x", "운영시간": "10:00~18:00"}
+    assert parse_rows([rec])[0].hours == "10:00~18:00"
