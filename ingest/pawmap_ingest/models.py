@@ -15,7 +15,7 @@ from pydantic.alias_generators import to_camel
 Category = Literal["RESTAURANT", "CAFE", "STAY", "ATTRACTION", "PET_SERVICE"]
 PetStatus = Literal["ALLOWED", "NOT_ALLOWED", "UNKNOWN"]
 EvidenceType = Literal["OFFICIAL", "BUSINESS_CONFIRMED", "PROVIDER", "USER_REPORT"]
-SourceId = Literal["KTO_PET", "MFDS_PET", "KCISA_PET", "GOOGLE", "MOCK"]
+SourceId = Literal["KTO_PET", "MFDS_PET", "KCISA_PET", "MOIS_VET", "GOOGLE", "MOCK"]
 ConditionField = Literal[
     "indoorAllowed",
     "outdoorAllowed",

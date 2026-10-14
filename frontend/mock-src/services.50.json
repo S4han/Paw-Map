@@ -57,6 +57,34 @@
    ],
    "conflictingEvidence": false,
    "lastVerifiedAt": "2025-03-24"
+  },
+  {
+   "id": "mock:s3",
+   "name": "(가상) 오름동물병원",
+   "category": "PET_SERVICE",
+   "subcategory": "동물병원",
+   "latitude": 33.503,
+   "longitude": 126.535,
+   "address": "제주특별자치도 제주시 가상로 33",
+   "phone": "064-000-0003",
+   "petStatus": "UNKNOWN",
+   "petConditions": {
+    "notes": [],
+    "fieldSources": {},
+    "conflicts": []
+   },
+   "evidence": [
+    {
+     "source": "MOCK",
+     "type": "OFFICIAL",
+     "petStatus": "UNKNOWN",
+     "checkedAt": "2026-10-12",
+     "fetchedAt": "2026-10-13T00:00:00+09:00",
+     "claim": "행정안전부 동물병원 인허가: 영업/정상 (가상)"
+    }
+   ],
+   "conflictingEvidence": false,
+   "lastVerifiedAt": "2026-10-12"
   }
  ]
 }

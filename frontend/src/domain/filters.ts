@@ -37,10 +37,12 @@ export function filterPlaces(
   space: SpaceFilter = 'ANY',
 ): PlaceWithDistance[] {
   const statuses = allowedStatuses[status]
+  // 반려 생활은 동반 장소가 아니다: 동반 정보가 없는 시설(인허가 자료의 동물병원 등)도 "동반 가능만"에서 보인다. 동반 불가라고 한 곳은 그대로 뺀다
+  const serviceStatuses = allowedStatuses[status === 'ALLOWED_ONLY' ? 'INCLUDE_UNKNOWN' : status]
   const spaceOk = (p: PetPlace) =>
     space === 'ANY' || (space === 'INDOOR' ? p.petConditions.indoorAllowed === true : p.petConditions.outdoorAllowed === true)
   return places
-    .filter((p) => categories.has(p.category) && statuses.includes(p.petStatus) && spaceOk(p))
+    .filter((p) => categories.has(p.category) && (p.category === 'PET_SERVICE' ? serviceStatuses : statuses).includes(p.petStatus) && spaceOk(p))
     .map((place) => ({ place, distance: distanceMeters(center, { lat: place.latitude, lng: place.longitude }) }))
     .filter((x) => x.distance <= radius)
     .sort((a, b) => a.distance - b.distance)

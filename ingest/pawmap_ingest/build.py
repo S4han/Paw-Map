@@ -12,6 +12,7 @@ from .models import DatasetManifest, ManifestRegion, ManifestSource, PetPlace, R
 from .regions import sido
 from .sources import kcisa as kcisa_source
 from .sources import mfds as mfds_source
+from .sources import mois as mois_source
 from .sources.kto import KtoSource
 
 BBOX_MARGIN = 0.1  # 데이터 범위 바깥 약 10km 까지는 같은 시도 파일로 본다
@@ -28,6 +29,8 @@ class BuildInputs:
     geocoder: Geocoder | None = None
     kcisa_rows: list[kcisa_source.KcisaRow] | None = None
     kcisa_fetched_at: str | None = None  # 한국문화정보원 파일을 받은 날
+    mois_items: list[dict] | None = None  # 행정안전부 동물병원(전국, 한 번 받아 시도마다 나눔)
+    mois_fetched_at: str | None = None  # 행정안전부 API 를 받은 날
 
 
 @dataclass
@@ -103,6 +106,25 @@ def build_region(inp: BuildInputs) -> BuildResult:
         report.add(f"- 제외한 분류 {skipped}")
         for w in ks.warnings:
             report.add(f"  - 파싱 경고: {w}")
+        report.add()
+
+    if inp.mois_items is not None:
+        if not inp.mois_fetched_at:
+            raise ValueError("행정안전부 가공에는 수집일이 필요합니다")
+        vs = mois_source.MoisStats()
+        vets = mois_source.places(inp.mois_items, inp.region_code, inp.mois_fetched_at, vs, inp.geocoder)
+        sources.append(ManifestSource(source="MOIS_VET", fetched_at=inp.mois_fetched_at, note="공공데이터포털 15154952(지방행정 인허가, 매일 갱신·2일 전 기준)"))
+        # 한국문화정보원 반려 생활을 기준으로 합친다(기존 id 유지 — 저장한 곳·공유 링크가 그대로 동작)
+        vet_merge = dedupe(services, vets)
+        services = vet_merge.places
+        report.add("## 행정안전부 동물병원 인허가")
+        report.add(f"- 전국 {vs.rows}건 → 지역 {vs.in_region}건, 영업상태 {dict(vs.by_status)}")
+        report.add(f"- 영업 중 {vs.used}건(좌표 변환 {vs.used - vs.geocoded}, 주소 검색 {vs.geocoded}, 좌표 없음 제외 {len(vs.no_coords)}, 관리번호 중복 {vs.duplicates})")
+        report.add(f"- 한국문화정보원 반려 생활과 병합 {len(vet_merge.merged)}건, 검토 후보 {len(vet_merge.review)}건")
+        for a, b, d in vet_merge.review:
+            report.add(f"  - 검토: {a} ↔ {b} ({d}m)")
+        for f in vs.no_coords:
+            report.add(f"  - 좌표 없음: {f}")
         report.add()
 
     # 관광공사를 기준으로 식약처를 합치고, 그 결과를 기준으로 한국문화정보원을 합친다
