@@ -18,6 +18,29 @@ export function directionLinks(place: Pick<PetPlace, 'name' | 'latitude' | 'long
   ]
 }
 
+// 정보 수정 제보(요구사항 P1 정보 변경 제보의 임시 경로, STEP 10 결정): 장소 정보를 미리 채운 GitHub 이슈 작성 화면.
+// 서버·비용 없음. 제보는 판정에 바로 반영하지 않고 다음 데이터 갱신 때 사람이 확인한다(USER_REPORT 원칙).
+// 사용자 위치·반려견 조건은 넣지 않는다.
+export function reportIssueUrl(issuesNewUrl: string, place: Pick<PetPlace, 'id' | 'name' | 'address'>): string {
+  const title = `[정보 제보] ${place.name}`
+  const body = [
+    `- 장소: ${place.name}`,
+    `- 장소 ID: ${place.id}`,
+    place.address ? `- 주소: ${place.address}` : null,
+    '',
+    '### 무엇이 다른가요?',
+    '(예: 이제 반려견 동반이 안 돼요 / 실내도 가능해요 / 10kg 이하만 가능해요)',
+    '',
+    '### 어떻게 확인하셨나요?',
+    '(예: 2026-10-14 방문 / 업체 전화 / 매장 안내문 사진 / 공식 SNS 링크)',
+    '',
+    '> 제보는 공개됩니다. 개인정보(전화번호·얼굴 사진 등)는 올리지 마세요.',
+  ]
+    .filter((line) => line !== null)
+    .join('\n')
+  return `${issuesNewUrl}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`
+}
+
 // tel: 링크. 숫자·+만 남기고, 7자리 미만이면 전화번호로 보지 않는다
 export function telHref(phone: string | undefined): string | null {
   const digits = (phone ?? '').replace(/[^\d+]/g, '')

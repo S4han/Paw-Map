@@ -84,6 +84,39 @@ test('위치 권한이 없어도 안내 후 계속 사용 가능', async ({ page
   await expect(summary(page)).toContainText('6곳')
 })
 
+test('즐겨찾기: 상세에서 저장하면 "저장한 곳"에 남고 새로고침 후에도 유지', async ({ page }) => {
+  await page.getByRole('button', { name: /\(가상\) 멍멍카페/ }).click()
+  await page.getByRole('dialog').getByRole('button', { name: '이 장소 저장' }).click()
+  await expect(page.getByRole('dialog').getByRole('button', { name: '저장 해제' })).toBeVisible()
+  await page.goBack()
+
+  await page.getByRole('button', { name: /저장한 곳 1/ }).click()
+  const saved = page.getByRole('list', { name: '저장한 곳' })
+  await expect(saved.getByRole('button', { name: /\(가상\) 멍멍카페/ })).toBeVisible()
+
+  await page.reload()
+  await expect(page.getByRole('button', { name: /저장한 곳 1/ })).toBeVisible()
+})
+
+test('코스 추천: 관광지 → 음식점 → 카페, 동반 가능 장소만 가까운 순', async ({ page }) => {
+  await page.getByRole('button', { name: /코스 추천/ }).click()
+  const sheet = page.getByRole('dialog', { name: /반려견 동반 코스/ })
+  const stops = sheet.getByRole('list', { name: '코스 순서' }).getByRole('listitem')
+  await expect(stops).toHaveCount(3)
+  await expect(stops.nth(0)).toContainText('(가상) 별빛오름')
+  await expect(stops.nth(1)).toContainText('(가상) 바다식당') // 노펫국수(동반 불가)는 제외
+  await expect(stops.nth(2)).toContainText('(가상) 골목카페')
+  await stops.nth(1).getByRole('button').click()
+  await expect(page.getByRole('dialog').getByRole('heading', { name: '(가상) 바다식당' })).toBeVisible()
+})
+
+test('신선도·제보: 확인일 없는 장소는 재확인 안내, 제보는 GitHub 이슈로', async ({ page }) => {
+  await page.getByRole('button', { name: /\(가상\) 바다식당/ }).click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByText(/언제 확인한 정보인지 알려 주지 않았어요/)).toBeVisible()
+  await expect(dialog.getByRole('link', { name: /정보 수정 제보하기/ })).toHaveAttribute('href', /github\.com\/S4han\/Paw-Map\/issues\/new\?title=/)
+})
+
 test.describe('위치 권한 허용', () => {
   test.use({ permissions: ['geolocation'], geolocation: { latitude: 33.4996, longitude: 126.5312 } })
 

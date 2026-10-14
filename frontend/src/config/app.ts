@@ -18,6 +18,9 @@ export const categories: { id: Category; name: string; icon: string }[] = [
   { id: 'ATTRACTION', name: '관광지', icon: '🌳' },
 ]
 
+// 정보 수정 제보를 받는 곳(공개 저장소 이슈). GitHub 계정이 있어야 작성할 수 있다
+export const REPORT_ISSUES_NEW_URL = 'https://github.com/S4han/Paw-Map/issues/new'
+
 export const radiusOptions = [1000, 3000, 5000, 10000] as const
 export type SearchRadius = (typeof radiusOptions)[number]
 export const DEFAULT_RADIUS: SearchRadius = 3000
