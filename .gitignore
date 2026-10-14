@@ -25,6 +25,7 @@ reports/
 ingest/cache/
 frontend/public/data/live/
 frontend/public/data/preview/
+frontend/public/data/live-backup/
 
 # Playwright
 test-results/

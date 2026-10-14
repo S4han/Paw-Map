@@ -9,8 +9,11 @@
 /sw.js
   Cache-Control: no-cache
 
-# 데이터는 짧게 캐시(갱신 반영), 해시 파일은 길게
+# 데이터는 파일 이름이 버전마다 같으므로(manifest.json, places.11.json …) 매번 서버에 바뀌었는지 확인한다.
+# 바뀌지 않았으면 304 로 끝나 다시 받지 않는다. (2026-10-14: max-age=3600 이던 때 전국 데이터 배포 후
+# 휴대폰이 1시간 동안 예전 manifest(제주만)를 써서 서울이 "데이터 없음"으로 보임)
 /data/*
-  Cache-Control: public, max-age=3600
+  Cache-Control: no-cache
+# 해시가 붙은 빌드 파일은 길게
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
