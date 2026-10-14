@@ -84,6 +84,7 @@ npx --yes wrangler@4 pages deploy dist --project-name paw-map --branch main
 ### 2.4 데이터 갱신 절차 (월 1회 권장, 격자 방식)
 
 0. **선행:** 격자 방식 코드가 main 에 병합·자동 배포된 뒤에 한다(예전 코드는 칸 파일을 못 읽음).
+   - **맨 먼저 `git checkout main && git pull`.** 6번의 `wrangler pages deploy` 는 내 작업 폴더의 앱 코드까지 빌드해 올리므로, 머지 전 코드면 자동 배포된 새 앱을 예전 앱으로 덮어쓴다(2026-10-14 실제 발생: 새 출처 이름이 안 보이고 새 병원이 필터에 가려짐)
 1. 원본 받기 → `ingest/input/`
    - 식약처 "반려동물 동반 가능 업소 현황" xlsx(식품안전나라) — 매번 새로 받는다. 받은 날 = `--mfds-date`
    - 한국문화정보원 CSV(공공데이터포털 15111389) — 새 판이 올라왔을 때만 바꾼다. 받은 날 = `--kcisa-date`
