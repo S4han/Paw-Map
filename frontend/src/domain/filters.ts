@@ -2,6 +2,16 @@ import type { Category, PetPlace } from '../types/place'
 import { distanceMeters, type LatLng } from './distance'
 
 export type PetStatusFilter = 'ALLOWED_ONLY' | 'INCLUDE_UNKNOWN' | 'ALL'
+// 공간: 출처가 "가능"이라고 한 곳만 남긴다(정보 없음은 빠짐 — 화면에 그렇게 안내)
+export type SpaceFilter = 'ANY' | 'INDOOR' | 'OUTDOOR'
+// 카테고리 탭: 하나만 고른다. '전체'는 동반 장소 4종(반려 생활 제외)
+export type CategoryTab = 'ALL' | Category
+
+const DOG_PLACES: Category[] = ['RESTAURANT', 'CAFE', 'STAY', 'ATTRACTION']
+
+export function categoriesForTab(tab: CategoryTab): ReadonlySet<Category> {
+  return new Set(tab === 'ALL' ? DOG_PLACES : [tab])
+}
 
 export type PlaceWithDistance = { place: PetPlace; distance: number }
 
@@ -18,10 +28,13 @@ export function filterPlaces(
   radius: number,
   categories: ReadonlySet<Category>,
   status: PetStatusFilter,
+  space: SpaceFilter = 'ANY',
 ): PlaceWithDistance[] {
   const statuses = allowedStatuses[status]
+  const spaceOk = (p: PetPlace) =>
+    space === 'ANY' || (space === 'INDOOR' ? p.petConditions.indoorAllowed === true : p.petConditions.outdoorAllowed === true)
   return places
-    .filter((p) => categories.has(p.category) && statuses.includes(p.petStatus))
+    .filter((p) => categories.has(p.category) && statuses.includes(p.petStatus) && spaceOk(p))
     .map((place) => ({ place, distance: distanceMeters(center, { lat: place.latitude, lng: place.longitude }) }))
     .filter((x) => x.distance <= radius)
     .sort((a, b) => a.distance - b.distance)

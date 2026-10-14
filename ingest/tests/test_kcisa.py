@@ -195,3 +195,17 @@ def test_parse_region_arg():
 def test_region_prefixes(sido_name, code):
     stats = kcisa.KcisaStats()
     assert kcisa.places([row(sido=sido_name)], code, "2026-10-14", stats) and stats.in_region == 1
+
+
+def test_parking_is_optional_and_only_y_n():
+    rec = dict.fromkeys(HEADER, "") | {"시설명": "가상펜션", "카테고리3": "펜션", "시도 명칭": "제주특별자치도", "위도": "33.5", "경도": "126.5", "반려동물 동반 가능정보": "Y"}
+    assert parse_rows([rec])[0].parking == ""  # 열이 없어도 읽는다
+    out = kcisa.places([row(parking="Y"), row(name="b", parking="N", road_address="x2"), row(name="c", parking="문의", road_address="x3")], "50", "d", kcisa.KcisaStats())
+    assert [p.parking_available for p in out] == [True, False, None]
+
+
+def test_merge_parking_conflict_becomes_unknown():
+    from pawmap_ingest.dedupe import _same_or_none
+
+    assert _same_or_none(None, True) is True and _same_or_none(False, None) is False
+    assert _same_or_none(True, True) is True and _same_or_none(True, False) is None

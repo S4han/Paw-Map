@@ -56,6 +56,7 @@ export interface PetPlace {
   longitude: number
   address?: string
   phone?: string
+  parkingAvailable?: boolean // 출처가 준 주차 가능 여부(한국문화정보원). 없으면 모름
   imageUrl?: string
   imageCopyright?: 'Type1' | 'Type3'
   petStatus: PetStatus

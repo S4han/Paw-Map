@@ -64,6 +64,7 @@ class KcisaRow:
     outdoor: str
     fee: str
     updated: str
+    parking: str = ""  # 선택 열: '주차 가능여부'(값 형식 ❓ — Y/N 만 값으로 바꾼다)
 
 
 _COLUMNS = {
@@ -108,7 +109,7 @@ def parse_rows(records: list[dict[str, str]]) -> list[KcisaRow]:
     rows = []
     for r in records:
         clean = {k.strip(): (v or "").strip() for k, v in r.items() if k}
-        rows.append(KcisaRow(**{attr: clean[col] for attr, col in _COLUMNS.items()}))
+        rows.append(KcisaRow(**{attr: clean[col] for attr, col in _COLUMNS.items()}, parking=clean.get("주차 가능여부", "")))
     return rows
 
 
@@ -265,6 +266,7 @@ def split_places(rows: list[KcisaRow], region_code: str, fetched_at: str, stats:
             longitude=lng,
             address=address,
             phone=row.phone if norm_phone(row.phone) else None,
+            parking_available={"Y": True, "N": False}.get(row.parking),
             pet_status=status,
             pet_conditions=PetConditions(
                 **parsed.values,  # type: ignore[arg-type]
