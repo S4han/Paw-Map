@@ -166,6 +166,44 @@ def main() -> None:
     else:
         print(f"(비교 생략: {args.live} 없음 — 실데이터 가공 후 다시 실행하면 겹침도 계산)")
 
+    # 우리 4개 카테고리로 쓸 수 있는 행만 따로(1차 실측 결과: 제주 1191행 중 대부분이 동물병원·약국·용품·미용)
+    relevant_map = {"펜션": "STAY", "호텔": "STAY", "여행지": "ATTRACTION", "박물관": "ATTRACTION", "미술관": "ATTRACTION", "문예회관": "ATTRACTION", "카페": "CAFE", "식당": "RESTAURANT"}
+    c3 = "카테고리3" if "카테고리3" in headers else None
+    if c3:
+        print("\n[전국] 카테고리3:", ", ".join(f"{k} {v}" for k, v in Counter(r.get(c3, "") for r in rows).most_common(30)))
+        rel = [(r, la, lo) for r, la, lo in with_xy if r.get(c3, "") in relevant_map]
+        print(f"\n[{args.region} · 우리 카테고리 대상] {len(rel)}행 (" + ", ".join(f"{k}→{v}" for k, v in relevant_map.items()) + ")")
+        by_cat: dict[str, object] = {}
+        for cat3 in sorted({r.get(c3, "") for r, _, _ in rel}):
+            sub = [r for r, _, _ in rel if r.get(c3, "") == cat3]
+            def dist(h: str) -> list[list[object]]:
+                return top(Counter(r.get(h, "") for r in sub), 8) if h in headers else []
+            info = {
+                "rows": len(sub),
+                "allowed": dist("반려동물 동반 가능정보"),
+                "size": dist("입장 가능 동물 크기"),
+                "limits": dist("반려동물 제한사항"),
+                "indoorOutdoor": top(Counter(f"실내{r.get('장소(실내) 여부', '')}/실외{r.get('장소(실외)여부', '')}" for r in sub), 4),
+                "fee": dist("애견 동반 추가 요금"),
+                "years": top(Counter(r.get(col["updated"] or "", "")[:4] for r in sub), 4),
+                "examples": [r.get(col["name"] or "", "") for r in sub[:3]],
+            }
+            by_cat[cat3] = info
+            print(f"\n  ▸ {cat3} {len(sub)}행")
+            for k in ("allowed", "size", "limits", "indoorOutdoor", "fee", "years", "examples"):
+                v = info[k]
+                text = ", ".join(v) if k == "examples" else ", ".join(f"{a or '(빈 값)'} {b}" for a, b in v)  # type: ignore[misc]
+                print(f"    {k}: {text}")
+        summary["relevant"] = by_cat
+        if args.live.exists():
+            same = 0
+            for r, la, lo in rel:
+                nm, ph = norm_name(r.get(col["name"] or "", "")), norm_phone(r.get(col["phone"] or "", ""))
+                if any(dist_m(la, lo, p["latitude"], p["longitude"]) <= 50 and (norm_name(p["name"]) == nm or (ph and norm_phone(p.get("phone", "")) == ph)) for p in live):
+                    same += 1
+            summary["relevantOverlap"] = same
+            print(f"\n  대상 {len(rel)}행 중 기존 데이터와 같은 장소(50m + 이름·전화) {same} → 새 장소 후보 약 {len(rel) - same}")
+
     path = save("kcisa_pet_facilities", summary)
     print(f"\n요약 저장: {path} (커밋되지 않음). 위 터미널 출력만 공유해 주세요.")
 
