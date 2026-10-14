@@ -1,13 +1,13 @@
 """명령줄 도구.
 
   pawmap-ingest build --region 50|11,26|all --out <데이터셋 폴더> [--mfds 식약처.xlsx --mfds-date YYYY-MM-DD]
-                                         [--kcisa 한국문화정보원.csv --kcisa-date YYYY-MM-DD]
-                                         관광공사·식약처·한국문화정보원 → 시도 파일 생성 + 검증 + 보고서
+                                         [--kcisa 한국문화정보원.csv --kcisa-date YYYY-MM-DD] [--mois-vet]
+                                         관광공사·식약처·한국문화정보원·행정안전부(동물병원) → 시도 파일 + 격자 칸 + 검증 + 보고서
   pawmap-ingest tile <시도 파일 폴더> <배포 폴더>  시도 파일 데이터셋 → 0.1도 격자 칸 파일(배포용)
   pawmap-ingest validate <데이터셋 폴더>   manifest·시도 파일의 스키마와 판정 규칙 검증
   pawmap-ingest schema [출력 파일]         데이터셋 JSON 스키마 내보내기
 
-키는 환경변수로만: DATA_GO_KR_SERVICE_KEY(관광공사), KAKAO_REST_API_KEY(식약처 주소→좌표)
+키는 환경변수로만: DATA_GO_KR_SERVICE_KEY(관광공사·행정안전부), KAKAO_REST_API_KEY(식약처 주소→좌표)
 """
 
 from __future__ import annotations
@@ -75,6 +75,7 @@ def run_build(args: argparse.Namespace) -> int:
     from .regions import parse_region_arg, sido
     from .sources import kcisa as kcisa_source
     from .sources import mfds as mfds_source
+    from .sources import mois as mois_source
     from .sources.kto import BudgetExceeded, KtoSource, http_fetcher
 
     try:
@@ -97,6 +98,13 @@ def run_build(args: argparse.Namespace) -> int:
             raise SystemExit("[중단] --kcisa-date(한국문화정보원 파일을 받은 날, YYYY-MM-DD)가 필요합니다")
         base.kcisa_rows = kcisa_source.read_csv(Path(args.kcisa))
         base.kcisa_fetched_at = args.kcisa_date
+    if args.mois_vet:
+        # 전국을 한 번 받아(100건씩 약 110회) 시도마다 나눈다. 같은 날 다시 실행하면 캐시를 쓴다
+        today = now.strftime("%Y-%m-%d")
+        items, mois_date, calls = mois_source.load_or_fetch(mois_source.http_fetcher(_env_key("DATA_GO_KR_SERVICE_KEY")), cache / "mois_vet.json", today)
+        print(f"행정안전부 동물병원: 전국 {len(items)}건 ({'캐시 재사용' if calls == 0 else f'호출 {calls}회'})")
+        base.mois_items = items
+        base.mois_fetched_at = mois_date
 
     # 시도 파일은 작업 폴더에 쌓고(여러 날에 나눠 가공해도 이어짐), 끝에 배포 폴더(--out)로 격자 칸 파일을 만든다.
     work = Path(args.work_dir)
@@ -149,6 +157,7 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--mfds-date", help="식약처 파일을 받은 날 YYYY-MM-DD")
     b.add_argument("--kcisa", help="한국문화정보원 반려동물 동반 가능 문화시설 위치 데이터 csv")
     b.add_argument("--kcisa-date", help="한국문화정보원 파일을 받은 날 YYYY-MM-DD")
+    b.add_argument("--mois-vet", action="store_true", help="행정안전부 동물병원 인허가(공공데이터포털 15154952, 활용신청 필요)")
     b.add_argument("--skip-kto", action="store_true")
     b.add_argument("--max-calls", type=int, default=800, help="관광공사 실행당 호출 상한")
     b.add_argument("--cache-dir", default="cache")

@@ -39,6 +39,13 @@ describe('filterPlaces', () => {
     expect(filterPlaces(ps, center, 1000, all, 'INCLUDE_UNKNOWN').map((x) => x.place.id).sort()).toEqual(['ok', 'unk'])
     expect(filterPlaces(ps, center, 1000, all, 'ALL')).toHaveLength(3)
   })
+
+  it('반려 생활은 "동반 가능만"에서도 동반 정보 없는 시설(인허가 동물병원)을 보이고, 불가라고 한 곳은 뺀다', () => {
+    const svc = new Set<Category>(['PET_SERVICE'])
+    const ps = [place('ok', 0, 'PET_SERVICE'), place('vet', 0, 'PET_SERVICE', 'UNKNOWN'), place('no', 0, 'PET_SERVICE', 'NOT_ALLOWED')]
+    expect(filterPlaces(ps, center, 1000, svc, 'ALLOWED_ONLY').map((x) => x.place.id).sort()).toEqual(['ok', 'vet'])
+    expect(filterPlaces(ps, center, 1000, svc, 'ALL')).toHaveLength(3)
+  })
 })
 
 describe('카테고리 탭·공간 필터', () => {

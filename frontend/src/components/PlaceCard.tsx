@@ -62,9 +62,12 @@ export function PlaceCard({ place, distance, selected, match, favorite, onToggle
             {region && ` · ${region}`} · {formatDistance(distance)}
           </span>
           <span className="mt-1.5 flex flex-wrap items-center gap-1">
-            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ring-1 ${status.className}`}>
-              {status.icon} {status.text}
-            </span>
+            {/* 반려 생활 시설에 동반 정보가 없으면 '미확인' 배지를 달지 않는다(동반 장소가 아니므로) */}
+            {!(place.category === 'PET_SERVICE' && place.petStatus === 'UNKNOWN') && (
+              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ring-1 ${status.className}`}>
+                {status.icon} {status.text}
+              </span>
+            )}
             {match && (
               <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ${matchLabel[match.status].className}`}>
                 {matchLabel[match.status].icon} {matchLabel[match.status].text}

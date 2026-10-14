@@ -20,7 +20,7 @@
     33.6,
     127.0
    ],
-   "servicesCount": 2
+   "servicesCount": 3
   }
  ],
  "tileDeg": 0.1,
@@ -33,7 +33,7 @@
   {
    "key": "335_1265",
    "count": 5,
-   "servicesCount": 1
+   "servicesCount": 2
   }
  ]
 }
