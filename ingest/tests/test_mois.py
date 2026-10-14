@@ -136,3 +136,17 @@ def test_hospital_and_pharmacy_in_same_building_stay_separate():
     result = build_region(inp)
     assert sorted(p.subcategory for p in result.services) == ["동물병원", "동물약국"]
     assert {s.source for s in result.sources} == {"MOIS_VET", "MOIS_PHARMACY"}
+
+
+def test_merged_gwangju_jeonnam_split_by_district():
+    from pawmap_ingest.regions import address_sido
+
+    assert address_sido("전남광주통합특별시 광산구 풍영철길로 20-6") == "29"
+    assert address_sido("전남광주통합특별시 북구 유동길 46") == "29"
+    assert address_sido("전남광주통합특별시 영광군 영광읍 대하길2길 4") == "46"
+    assert address_sido("전라남도 순천시 1") == "46" and address_sido("광주광역시 서구 1") == "29"
+    assert address_sido("경기도 광주시 1") == "41"
+    assert address_sido("어딘가특별시 1") is None and address_sido("") is None
+    items = [item("1", "광산동물병원", "전남광주통합특별시 광산구 풍영철길로 20-6"), item("2", "영광동물병원", "전남광주통합특별시 영광군 영광읍 1")]
+    assert [p.name for p in mois.places(items, "29", "2026-10-14", mois.MoisStats())] == ["광산동물병원"]
+    assert [p.name for p in mois.places(items, "46", "2026-10-14", mois.MoisStats())] == ["영광동물병원"]

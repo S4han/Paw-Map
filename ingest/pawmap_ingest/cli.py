@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections import Counter
 import os
 import sys
 from datetime import datetime, timedelta, timezone
@@ -108,6 +109,9 @@ def run_build(args: argparse.Namespace) -> int:
             kind = mois_source.KINDS[k]
             items, _, calls = mois_source.load_or_fetch(mois_source.http_fetcher(key, kind), cache / f"mois_{k}.json", today)
             print(f"행정안전부 {kind.subcategory}: 전국 {len(items)}건 ({'캐시 재사용' if calls == 0 else f'호출 {calls}회'})")
+            unknown = Counter(mois_source.first_token(i) for i in items if mois_source.item_sido(i) is None)
+            if unknown:  # 시도를 알 수 없는 주소(새 통합 시도 이름 등) — 어느 시도에도 들어가지 않으므로 알린다
+                print(f"  [주의] 시도를 알 수 없는 주소 {sum(unknown.values())}건: {dict(unknown.most_common(5))}")
             base.mois[k] = items
         base.mois_fetched_at = today
 

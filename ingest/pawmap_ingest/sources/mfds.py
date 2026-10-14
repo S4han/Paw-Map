@@ -14,7 +14,7 @@ from ..classify import mfds_category
 from ..geocode import Geocoder
 from ..models import Evidence, PetConditions, PetPlace
 from ..normalize import clean_address, norm_address, norm_name, stable_key
-from ..regions import sido
+from ..regions import address_sido
 from ..rules import decide_pet_status
 
 CLAIM = "식약처 반려동물 동반출입 음식점 등록"
@@ -59,12 +59,11 @@ def parse_rows(rows: list[list[str]]) -> list[MfdsRow]:
 
 
 def places(rows: list[MfdsRow], region_code: str, geocoder: Geocoder, fetched_at: str, stats: MfdsStats) -> list[PetPlace]:
-    prefixes = sido(region_code).prefixes
     stats.rows = len(rows)
     seen: set[str] = set()
     result: list[PetPlace] = []
     for row in rows:
-        if not row.address.startswith(prefixes):
+        if address_sido(row.address) != region_code:
             continue
         stats.in_region += 1
         key = stable_key(norm_name(row.name), norm_address(row.address))

@@ -20,7 +20,7 @@ from pathlib import Path
 
 from ..models import Category, Evidence, PetConditions, PetPlace, PetStatus
 from ..normalize import norm_address, norm_name, norm_phone, stable_key
-from ..regions import sido
+from ..regions import MERGED, address_sido
 from ..rules import decide_pet_status, last_verified_at
 
 SOURCE = "KCISA_PET"
@@ -227,13 +227,14 @@ def places(rows: list[KcisaRow], region_code: str, fetched_at: str, stats: Kcisa
 
 def split_places(rows: list[KcisaRow], region_code: str, fetched_at: str, stats: KcisaStats) -> tuple[list[PetPlace], list[PetPlace]]:
     """(동반 장소, 반려 생활 시설) — 지역에 속한 행을 카테고리3 으로 나눈다. 그 밖의 분류는 버린다(보고서에 건수)."""
-    prefixes = sido(region_code).prefixes
     stats.rows = len(rows)
     seen: set[str] = set()
     result: list[PetPlace] = []
     services: list[PetPlace] = []
     for row in rows:
-        if not row.sido.startswith(prefixes):
+        # 시도 명칭 열로 나눈다. 통합 시도(전남광주 등)면 시군구가 필요하므로 주소로 나눈다
+        code = address_sido(row.road_address or row.jibun_address) if row.sido.strip() in MERGED else address_sido(row.sido)
+        if code != region_code:
             continue
         stats.in_region += 1
         stats.by_category3[row.category3] += 1

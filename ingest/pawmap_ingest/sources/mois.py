@@ -24,7 +24,7 @@ from ..epsg5174 import to_wgs84
 from ..geocode import Geocoder
 from ..models import Evidence, PetConditions, PetPlace
 from ..normalize import clean_address, norm_phone
-from ..regions import sido
+from ..regions import address_sido
 from ..rules import decide_pet_status, last_verified_at
 
 OPEN = "01"  # 영업/정상
@@ -134,14 +134,22 @@ def checked_date(item: dict[str, Any]) -> str | None:
     return v[:10] if len(v) >= 10 and v[4] == "-" else None
 
 
+def item_sido(item: dict[str, Any]) -> str | None:
+    return address_sido(_s(item, "ROAD_NM_ADDR") or _s(item, "LOTNO_ADDR"))
+
+
+def first_token(item: dict[str, Any]) -> str:
+    parts = (_s(item, "ROAD_NM_ADDR") or _s(item, "LOTNO_ADDR")).split()
+    return parts[0] if parts else "(빈 주소)"
+
+
 def places(items: list[dict[str, Any]], region_code: str, fetched_at: str, stats: MoisStats, geocoder: Geocoder | None = None, kind: Kind = VET) -> list[PetPlace]:
-    prefixes = sido(region_code).prefixes
     stats.rows = len(items)
     seen: set[str] = set()
     result: list[PetPlace] = []
     for it in items:
         road, lot = _s(it, "ROAD_NM_ADDR"), _s(it, "LOTNO_ADDR")
-        if not (road or lot).startswith(prefixes):
+        if item_sido(it) != region_code:
             continue
         stats.in_region += 1
         status_name = _s(it, "SALS_STTS_NM") or _s(it, "SALS_STTS_CD") or "(빈 값)"
