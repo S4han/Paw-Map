@@ -63,6 +63,15 @@ npx --yes wrangler@4 pages deploy dist --project-name paw-map --branch main
   ```
   배포 목록의 `Environment` 가 `Production` 인지로 확인: `npx --yes wrangler@4 pages deployment list --project-name paw-map`
 
+### 2.3 자동 배포 (GitHub Actions, `.github/workflows/deploy.yml`)
+
+- **언제:** `main` 에 코드가 들어올 때(PR 병합 등) + Actions 화면에서 수동 실행(Run workflow).
+- **무엇을:** 단위 테스트 → 운영 사이트의 현재 실데이터 받기(`scripts/fetch-live-data.mjs`) → `pawmap-ingest validate` → 빌드 → 키 노출 검사 → `--branch main` 배포. 하나라도 실패하면 배포하지 않는다.
+- **데이터는 자동 갱신하지 않는다.** 식약처 xlsx 는 사람이 내려받아야 하고 실데이터는 저장소에 두지 않으므로, 데이터 갱신은 §2.2 수동 절차 그대로. 자동 배포는 운영 중인 데이터를 그대로 이어 쓴다.
+- **준비(한 번):** 저장소 Settings → Secrets and variables → **Actions** → New repository secret 으로 `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `VITE_KAKAO_JS_KEY` 등록. Codespaces 시크릿과는 따로 등록해야 한다. 서버 키(공공데이터·카카오 REST)는 넣지 않는다.
+- 포크에서 온 PR 에는 시크릿이 전달되지 않고, 이 워크플로는 PR 에서 실행되지 않는다.
+- GitHub Actions 사용량: 공개 저장소의 표준 러너는 무료로 안내됨(🔷, GitHub 문서) — 요금 정책은 Settings → Billing 에서 확인.
+
 ---
 
 ## 3. 정기 운영
