@@ -34,7 +34,7 @@ cd frontend && npm run e2e        # Playwright 주요 흐름(처음 한 번 npx 
 cd ingest && .venv/bin/pytest     # 가공 파이프라인 테스트
 cd ingest && .venv/bin/pawmap-ingest validate ../frontend/public/data/mock   # 데이터셋 검증(격자 방식)
 cd ingest && .venv/bin/pawmap-ingest tile ../frontend/mock-src ../frontend/public/data/mock   # 가상 데이터 원본 → 격자 칸
-cd ingest && .venv/bin/pawmap-ingest build --region all --out ../frontend/public/data/live --mfds input/파일.xlsx --mfds-date YYYY-MM-DD --kcisa input/파일.csv --kcisa-date YYYY-MM-DD --mois-vet
+cd ingest && .venv/bin/pawmap-ingest build --region all --out ../frontend/public/data/live --mfds input/파일.xlsx --mfds-date YYYY-MM-DD --kcisa input/파일.csv --kcisa-date YYYY-MM-DD --mois-vet --mois-pharmacy
 python3 poc/localdata_animal.py "<요청주소>" --geocode 10   # 인허가 API 실측(새 업종 붙이기 전)
 ```
 

@@ -91,8 +91,8 @@ npx --yes wrangler@4 pages deploy dist --project-name paw-map --branch main
 2. 키 확인(값은 출력하지 않음, `DATA_GO_KR_SERVICE_KEY` 는 관광공사·행정안전부 공용): `for k in DATA_GO_KR_SERVICE_KEY KAKAO_REST_API_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do [ -n "${!k}" ] && echo "$k 있음" || echo "$k 없음"; done`
 3. 이전 배포본 백업: `cp -r frontend/public/data/live /tmp/live-prev`
 4. 작업 폴더 비우기(캐시는 남김): `rm -rf ingest/cache/dataset` — `ingest/cache/kto_detail`(관광공사 상세)·`geocode.json`(주소→좌표)은 지우지 않는다(호출 수 절약)
-5. 가공: `cd ingest && .venv/bin/pawmap-ingest build --region all --out ../frontend/public/data/live --mfds input/<식약처>.xlsx --mfds-date <받은날> --kcisa input/<문화정보원>.csv --kcisa-date <받은날> --mois-vet`
-   - `--mois-vet`: 행정안전부 동물병원 인허가 API(공공데이터포털 15154952, 같은 공공데이터 키에 활용신청 필요). 전국을 한 번(100건씩 약 110회) 받아 `ingest/cache/mois_vet.json` 에 두고, 같은 날 다시 실행하면 캐시를 쓴다. 영업 중인 곳만 반려 생활 → 동물병원에 넣는다
+5. 가공: `cd ingest && .venv/bin/pawmap-ingest build --region all --out ../frontend/public/data/live --mfds input/<식약처>.xlsx --mfds-date <받은날> --kcisa input/<문화정보원>.csv --kcisa-date <받은날> --mois-vet --mois-pharmacy`
+   - `--mois-vet`: 행정안전부 동물병원 인허가 API(공공데이터포털 15154952, 같은 공공데이터 키에 활용신청 필요). 전국을 한 번(100건씩 약 110회) 받아 `ingest/cache/mois_vet.json` 에 두고, 같은 날 다시 실행하면 캐시를 쓴다. `--mois-pharmacy` 도 같은 방식(동물약국). 영업 중인 곳만 반려 생활 → 동물병원·동물약국에 넣는다
    - `[멈춤]`(관광공사 호출 상한) → 다음 날 출력된 "남은 시도만 다시: --region …" 그대로 실행(같은 명령에서 `--region` 만 바꿈). 모두 끝나야 `--out` 에 칸 파일이 만들어진다
    - 끝에 "## 검증 - 통과", 시도별 건수가 이전과 크게 다르지 않은지(전국 동반 장소 약 7,000·반려 생활 약 20,000, 2026-10-14 기준) 확인. 시도별 보고서 `reports/ingest-*-{코드}.md`
 6. 검사·빌드·배포: `cd ../frontend && npm test && VITE_DATASET_BASE=/data/live npm run build && npm run check:secrets && npx --yes wrangler@4 pages deploy dist --project-name paw-map --branch main`
