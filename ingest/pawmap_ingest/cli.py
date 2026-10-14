@@ -1,6 +1,6 @@
 """명령줄 도구.
 
-  pawmap-ingest build --region 50 --out <데이터셋 폴더> [--mfds 식약처.xlsx --mfds-date YYYY-MM-DD]
+  pawmap-ingest build --region 50|11,26|all --out <데이터셋 폴더> [--mfds 식약처.xlsx --mfds-date YYYY-MM-DD]
                                          [--kcisa 한국문화정보원.csv --kcisa-date YYYY-MM-DD]
                                          관광공사·식약처·한국문화정보원 → 시도 파일 생성 + 검증 + 보고서
   pawmap-ingest validate <데이터셋 폴더>   manifest·시도 파일의 스키마와 판정 규칙 검증
@@ -34,8 +34,18 @@ def validate(folder: Path) -> list[str]:
         ids = [p.id for p in data.places]
         if len(ids) != len(set(ids)):
             errors.append(f"{region.file}: 중복 id")
+        places = list(data.places)
+        if region.services_file:
+            services = RegionFile.model_validate_json((folder / region.services_file).read_text(encoding="utf-8"))
+            if services.region_code != region.code or len(services.places) != region.services_count:
+                errors.append(f"{region.services_file}: 지역 코드·건수가 manifest 와 다름")
+            if any(p.category != "PET_SERVICE" for p in services.places):
+                errors.append(f"{region.services_file}: 반려 생활이 아닌 장소가 섞임")
+            if any(p.category == "PET_SERVICE" for p in data.places):
+                errors.append(f"{region.file}: 반려 생활 시설은 {region.services_file} 에만 둔다")
+            places += services.places
         min_lat, min_lng, max_lat, max_lng = region.bbox
-        for p in data.places:
+        for p in places:
             errors += [f"{region.file} {p.id}: {msg}" for msg in check_place(p)]
             if not (min_lat <= p.latitude <= max_lat and min_lng <= p.longitude <= max_lng):
                 errors.append(f"{region.file} {p.id}: 좌표가 지역 경계 상자 밖")
@@ -50,46 +60,64 @@ def _env_key(name: str) -> str:
 
 
 def run_build(args: argparse.Namespace) -> int:
+    from dataclasses import replace
+
     from .build import BuildInputs, build_region, write_outputs
     from .geocode import Geocoder, make_kakao_lookup
+    from .regions import parse_region_arg, sido
     from .sources import kcisa as kcisa_source
     from .sources import mfds as mfds_source
-    from .sources.kto import KtoSource, http_fetcher
+    from .sources.kto import BudgetExceeded, KtoSource, http_fetcher
 
+    try:
+        codes = parse_region_arg(args.region)
+    except ValueError as e:
+        raise SystemExit(f"[중단] {e}") from None
     now = datetime.now(timezone(timedelta(hours=9)))
     cache = Path(args.cache_dir)
-    inp = BuildInputs(region_code=args.region, version=now.strftime("%Y%m%d"), fetched_at=now.isoformat(timespec="seconds"))
+    base = BuildInputs(region_code=codes[0], version=now.strftime("%Y%m%d"), fetched_at=now.isoformat(timespec="seconds"))
     if not args.skip_kto:
-        inp.kto = KtoSource(http_fetcher(_env_key("DATA_GO_KR_SERVICE_KEY")), cache / "kto_detail", max_calls=args.max_calls)
+        base.kto = KtoSource(http_fetcher(_env_key("DATA_GO_KR_SERVICE_KEY")), cache / "kto_detail", max_calls=args.max_calls)
     if args.mfds:
         if not args.mfds_date:
             raise SystemExit("[중단] --mfds-date(식약처 파일을 받은 날, YYYY-MM-DD)가 필요합니다")
-        inp.mfds_rows = mfds_source.parse_rows(mfds_source.read_xlsx(Path(args.mfds)))
-        inp.mfds_fetched_at = args.mfds_date
-        inp.geocoder = Geocoder(make_kakao_lookup(_env_key("KAKAO_REST_API_KEY")), cache / "geocode.json")
+        base.mfds_rows = mfds_source.parse_rows(mfds_source.read_xlsx(Path(args.mfds)))
+        base.mfds_fetched_at = args.mfds_date
+        base.geocoder = Geocoder(make_kakao_lookup(_env_key("KAKAO_REST_API_KEY")), cache / "geocode.json")
     if args.kcisa:
         if not args.kcisa_date:
             raise SystemExit("[중단] --kcisa-date(한국문화정보원 파일을 받은 날, YYYY-MM-DD)가 필요합니다")
-        inp.kcisa_rows = kcisa_source.read_csv(Path(args.kcisa))
-        inp.kcisa_fetched_at = args.kcisa_date
+        base.kcisa_rows = kcisa_source.read_csv(Path(args.kcisa))
+        base.kcisa_fetched_at = args.kcisa_date
 
-    try:
-        places, report, sources = build_region(inp)
-    finally:
-        if inp.geocoder:
-            inp.geocoder.save()
+    # 시도 하나씩 가공·저장한다. 관광공사 호출 상한에 걸리면 그 시도부터 멈추고, 끝난 시도는 그대로 둔다
+    # (다음 날 같은 명령을 다시 실행하면 상세는 캐시를 재사용하므로 금방 따라잡는다).
     out = Path(args.out)
-    write_outputs(out, inp, places, sources)
+    done: list[str] = []
+    summary: list[str] = []
+    for code in codes:
+        inp = replace(base, region_code=code)
+        try:
+            result = build_region(inp)
+        except BudgetExceeded as e:
+            print(f"[멈춤] {code} {sido(code).name}: {e}")
+            print(f"완료된 시도: {', '.join(done) or '없음'} / 남은 시도: {', '.join(c for c in codes if c not in done)}")
+            return 2
+        finally:
+            if base.geocoder:
+                base.geocoder.save()
+        write_outputs(out, inp, result)
+        report_path = Path(args.report_dir) / f"ingest-{inp.version}-{code}.md"
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(result.report.markdown(), encoding="utf-8")
+        if len(codes) == 1:
+            print(result.report.markdown())
+        counts = result.report.counts
+        summary.append(f"- {code} {sido(code).name}: 동반 장소 {counts.get('total', 0)}곳, 반려 생활 {len(result.services)}곳 → {report_path}")
+        done.append(code)
+
     errors = validate(out)
-    report.add()
-    report.add("## 검증")
-    report.add("- 통과" if not errors else f"- 오류 {len(errors)}건")
-    report.lines += [f"  - {e}" for e in errors]
-    report_path = Path(args.report_dir) / f"ingest-{inp.version}-{args.region}.md"
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(report.markdown(), encoding="utf-8")
-    print(report.markdown())
-    print(f"보고서: {report_path}")
+    print("\n".join(["# 가공 요약", *summary, "", "## 검증", "- 통과" if not errors else f"- 오류 {len(errors)}건", *[f"  - {e}" for e in errors]]))
     return 1 if errors else 0
 
 
@@ -97,7 +125,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="pawmap-ingest")
     sub = parser.add_subparsers(dest="cmd", required=True)
     b = sub.add_parser("build")
-    b.add_argument("--region", required=True, help="법정동 시도 코드(제주 50)")
+    b.add_argument("--region", required=True, help="법정동 시도 코드(제주 50), 쉼표로 여러 개, 또는 all(17개 시도)")
     b.add_argument("--out", required=True, help="데이터셋 폴더(예: ../frontend/public/data/live)")
     b.add_argument("--mfds", help="식약처 반려동물 동반 가능 업소 현황 xlsx")
     b.add_argument("--mfds-date", help="식약처 파일을 받은 날 YYYY-MM-DD")

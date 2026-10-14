@@ -92,6 +92,8 @@
 | 제주 | 약 160 | 약 150KB |
 | 전국 | 약 3,800 | 약 3~4MB → 시도별 분할로 1회 다운로드는 최대 약 1MB(경기) |
 
+> 2026-10-14 갱신: 한국문화정보원 자료 추가로 제주가 371곳(❓ 전국 실측 전). 반려 생활 시설(병원·약국·미용·용품)은 건수가 많아(제주 961곳, 전국 수만 곳 추정 🔷) `services.{시도}.json` 으로 분리하고, 그 카테고리를 켰을 때만 받는다. 전국 가공 후 시도별 파일 크기를 가공 보고서로 확인한다.
+
 ---
 
 ## 5. 데이터 모델 (확정안)
@@ -204,6 +206,8 @@ interface MatchResult {
 ### 6.5 산출물
 
 - `data/v{YYYYMMDD}/places.{시도}.json`, `manifest.json`(버전, 시도별 bbox·건수·크기, 출처별 수집일)
+- `services.{시도}.json`: 반려 생활 시설(카테고리 `PET_SERVICE`, 세부 분류 `subcategory`). manifest 의 `servicesFile`·`servicesCount`. 반려견 조건 매칭·코스 추천 대상이 아님
+- 시도 코드·이름·주소 앞부분은 `ingest/pawmap_ingest/regions.py`(17개 시도) 한 곳에서 관리
 - `reports/ingest-{날짜}.md`: 건수, 좌표 변환 실패, 파싱 결과 분포, 병합·검토 후보, 호출 수. 커밋하지 않음
 
 ---

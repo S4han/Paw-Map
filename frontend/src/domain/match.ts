@@ -57,6 +57,8 @@ const ORDER: Record<ReasonResult, number> = { FAIL: 0, CONFLICT: 1, UNKNOWN: 2, 
 
 export function matchPlace(place: PetPlace, profile: PetProfile): MatchResult | null {
   if (!isProfileSet(profile)) return null
+  // 반려 생활 시설(병원·약국 등)은 "데려갈 수 있는 곳"을 판단하는 대상이 아니다
+  if (place.category === 'PET_SERVICE') return null
 
   if (place.petStatus === 'NOT_ALLOWED') {
     return { status: 'MISMATCH', reasons: [{ field: 'petStatus', result: 'FAIL', message: '반려견 동반 불가' }] }

@@ -11,7 +11,8 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
 
-Category = Literal["RESTAURANT", "CAFE", "STAY", "ATTRACTION"]
+# PET_SERVICE: 반려 생활 시설(동물병원·약국·미용·용품). 동반 장소가 아니며 매칭·코스에 쓰지 않는다
+Category = Literal["RESTAURANT", "CAFE", "STAY", "ATTRACTION", "PET_SERVICE"]
 PetStatus = Literal["ALLOWED", "NOT_ALLOWED", "UNKNOWN"]
 EvidenceType = Literal["OFFICIAL", "BUSINESS_CONFIRMED", "PROVIDER", "USER_REPORT"]
 SourceId = Literal["KTO_PET", "MFDS_PET", "KCISA_PET", "GOOGLE", "MOCK"]
@@ -72,6 +73,7 @@ class PetPlace(Model):
     aliases: list[str] | None = None
     name: str = Field(min_length=1)
     category: Category
+    subcategory: str | None = None  # 출처의 세부 분류(예: 박물관, 동물병원) — 화면 표시용
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
     address: str | None = None
@@ -105,6 +107,8 @@ class ManifestRegion(Model):
     file: str
     count: int = Field(ge=0)
     bbox: tuple[float, float, float, float]
+    services_file: str | None = None  # 반려 생활 시설(필요할 때만 받음)
+    services_count: int | None = Field(default=None, ge=0)
 
 
 class DatasetManifest(Model):

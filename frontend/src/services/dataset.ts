@@ -17,15 +17,19 @@ export async function loadManifest(fetcher: Fetcher = fetch, base = DATASET_BASE
   return data
 }
 
+// kind 'services': 반려 생활 시설 파일(없는 지역이면 빈 목록)
 export async function loadRegion(
   manifest: DatasetManifest,
   regionCode: string,
   fetcher: Fetcher = fetch,
   base = DATASET_BASE,
+  kind: 'places' | 'services' = 'places',
 ): Promise<PetPlace[]> {
   const region = manifest.regions.find((r) => r.code === regionCode)
   if (!region) throw new DatasetError(`지역 ${regionCode} 데이터가 없어요`)
-  const data = (await getJson(`${base}/${region.file}`, fetcher)) as RegionFile
+  const file = kind === 'services' ? region.servicesFile : region.file
+  if (!file) return []
+  const data = (await getJson(`${base}/${file}`, fetcher)) as RegionFile
   if (data?.regionCode !== regionCode || !Array.isArray(data.places)) {
     throw new DatasetError('지역 데이터 형식이 올바르지 않아요')
   }

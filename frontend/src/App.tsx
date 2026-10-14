@@ -8,7 +8,7 @@ import { PlaceCard } from './components/PlaceCard'
 import { PlaceDetail } from './components/PlaceDetail'
 import { ProfileSheet } from './components/ProfileSheet'
 import { TopBar } from './components/TopBar'
-import { categories, DEFAULT_CENTER, DEFAULT_RADIUS, type SearchRadius } from './config/app'
+import { DEFAULT_CATEGORIES, DEFAULT_CENTER, DEFAULT_RADIUS, type SearchRadius } from './config/app'
 import { buildCourse } from './domain/course'
 import { distanceMeters, type LatLng } from './domain/distance'
 import { isFavorite } from './domain/favorites'
@@ -35,7 +35,7 @@ export default function App() {
 
   const [center, setCenter] = useState<SearchCenter>({ ...DEFAULT_CENTER, label: '제주시청(기본 위치)' })
   const [fitKey, setFitKey] = useState(0) // 새 검색마다 증가 → 지도를 반경에 맞춤
-  const [selectedCats, setSelectedCats] = useState<Set<Category>>(() => new Set(categories.map((c) => c.id)))
+  const [selectedCats, setSelectedCats] = useState<Set<Category>>(() => new Set(DEFAULT_CATEGORIES))
   const [radius, setRadius] = useState<SearchRadius>(DEFAULT_RADIUS)
   const [statusFilter, setStatusFilter] = useState<PetStatusFilter>('ALLOWED_ONLY')
   const [selectedId, setSelectedId] = useState<string>()
@@ -45,7 +45,9 @@ export default function App() {
   const [courseOpen, setCourseOpen] = useState(false)
 
   const regionCodes = useMemo(() => (manifest ? regionsForCircle(manifest, center, radius) : []), [manifest, center, radius])
-  const placesState = useRegionPlaces(manifest, regionCodes)
+  // 반려 생활 파일은 그 카테고리를 켰거나 저장한 곳에 반려 생활 시설이 있을 때만 받는다
+  const needServices = selectedCats.has('PET_SERVICE') || favorites.some((f) => f.category === 'PET_SERVICE')
+  const placesState = useRegionPlaces(manifest, regionCodes, needServices)
 
   const results = useMemo(
     () => (placesState.status === 'ready' ? filterPlaces(placesState.places, center, radius, selectedCats, statusFilter) : []),
@@ -259,6 +261,11 @@ export default function App() {
                     ⓘ 반려견 동반 숙소 공식 정보가 아직 적어요. 예약 전 숙소에 꼭 확인하세요.
                   </p>
                 )}
+                {selectedCats.has('PET_SERVICE') && (
+                  <p className="mb-2 rounded-lg bg-sky-50 px-3 py-1.5 text-xs text-sky-900" role="note">
+                    ⓘ 반려 생활은 동반 장소가 아니라 반려견을 위한 시설(동물병원·약국·미용·용품)이에요. 진료·영업 여부는 방문 전에 확인하세요.
+                  </p>
+                )}
                 {detailMissing && (
                   <p className="mb-2 rounded-lg bg-rose-50 px-3 py-1.5 text-xs text-rose-800" role="alert">
                     링크의 장소를 이 지역 데이터에서 찾을 수 없어요.{' '}
@@ -269,7 +276,7 @@ export default function App() {
                 )}
                 {regionCodes.length === 0 ? (
                   <p className="rounded-2xl bg-white p-4 text-sm text-slate-600 ring-1 ring-slate-200">
-                    이 지역은 아직 데이터가 없어요. 지금은 제주 지역만 볼 수 있어요.
+                    이 지역은 아직 데이터가 없어요. 다른 지역을 검색해 보세요.
                   </p>
                 ) : visible.length === 0 ? (
                   <p className="rounded-2xl bg-white p-4 text-sm text-slate-600 ring-1 ring-slate-200">

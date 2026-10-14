@@ -163,9 +163,10 @@ def test_build_end_to_end_produces_valid_dataset(tmp_path):
         mfds_fetched_at="2026-10-13",
         geocoder=Geocoder(FakeLookup(LOOKUP), tmp_path / "g.json"),
     )
-    places, report, sources = build_region(inp)
+    result = build_region(inp)
+    report = result.report
     out = tmp_path / "live"
-    write_outputs(out, inp, places, sources)
+    write_outputs(out, inp, result)
     assert validate(out) == []
     manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["isMock"] is False and manifest["regions"][0]["count"] == 4

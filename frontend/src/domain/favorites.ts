@@ -17,7 +17,7 @@ export function toggleFavorite(list: readonly SavedPlace[], place: Pick<PetPlace
   return [saved, ...list].slice(0, MAX_FAVORITES)
 }
 
-const categories: readonly Category[] = ['RESTAURANT', 'CAFE', 'STAY', 'ATTRACTION']
+const categories: readonly Category[] = ['RESTAURANT', 'CAFE', 'STAY', 'ATTRACTION', 'PET_SERVICE']
 
 // 저장된 값은 사용자가 손댈 수 있으므로 모양이 맞는 항목만 받아들인다
 export function parseFavorites(raw: string | null): SavedPlace[] {

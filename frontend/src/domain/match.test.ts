@@ -17,6 +17,12 @@ function place(petStatus: PetStatus, cond: Partial<PetConditions> = {}, conflict
 }
 
 const status = (p: PetPlace, profile: PetProfile) => matchPlace(p, profile)?.status
+
+describe('반려 생활 시설', () => {
+  it('병원·약국 등은 반려견 조건 매칭 대상이 아니다', () => {
+    expect(matchPlace({ ...place('ALLOWED'), category: 'PET_SERVICE' }, { weightKg: 12 })).toBeNull()
+  })
+})
 const messages = (p: PetPlace, profile: PetProfile) => matchPlace(p, profile)?.reasons.filter((r) => r.result !== 'OK').map((r) => r.message)
 
 describe('요구사항 §6.3 예시 표 (프로필: 12kg · 2마리 · 실내 필수)', () => {

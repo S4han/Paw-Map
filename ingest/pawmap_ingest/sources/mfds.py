@@ -14,11 +14,10 @@ from ..classify import mfds_category
 from ..geocode import Geocoder
 from ..models import Evidence, PetConditions, PetPlace
 from ..normalize import clean_address, norm_address, norm_name, stable_key
+from ..regions import sido
 from ..rules import decide_pet_status
 
 CLAIM = "식약처 반려동물 동반출입 음식점 등록"
-# 지역 필터: 법정동 시도 코드 → 주소 앞부분
-SIDO_PREFIX = {"50": ("제주",), "11": ("서울",), "51": ("강원",), "41": ("경기",)}
 
 
 @dataclass
@@ -60,9 +59,7 @@ def parse_rows(rows: list[list[str]]) -> list[MfdsRow]:
 
 
 def places(rows: list[MfdsRow], region_code: str, geocoder: Geocoder, fetched_at: str, stats: MfdsStats) -> list[PetPlace]:
-    prefixes = SIDO_PREFIX.get(region_code)
-    if not prefixes:
-        raise ValueError(f"식약처 지역 필터가 정의되지 않은 지역 코드: {region_code}")
+    prefixes = sido(region_code).prefixes
     stats.rows = len(rows)
     seen: set[str] = set()
     result: list[PetPlace] = []

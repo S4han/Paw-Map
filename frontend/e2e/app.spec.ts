@@ -117,6 +117,16 @@ test('신선도·제보: 확인일 없는 장소는 재확인 안내, 제보는 
   await expect(dialog.getByRole('link', { name: /정보 수정 제보하기/ })).toHaveAttribute('href', /github\.com\/S4han\/Paw-Map\/issues\/new\?title=/)
 })
 
+test('반려 생활: 기본으로 꺼져 있고, 켜면 병원·미용 등이 세부 분류와 함께 보인다', async ({ page }) => {
+  const chip = page.getByRole('group', { name: '카테고리' }).getByRole('button', { name: /반려 생활/ })
+  await expect(chip).toHaveAttribute('aria-pressed', 'false')
+  await expect(page.getByText('(가상) 한라동물병원')).toHaveCount(0)
+  await chip.click()
+  await expect(summary(page)).toContainText('8곳')
+  await expect(page.getByRole('button', { name: /\(가상\) 한라동물병원/ })).toContainText('반려 생활 · 동물병원')
+  await expect(page.getByText(/반려 생활은 동반 장소가 아니라/)).toBeVisible()
+})
+
 test.describe('위치 권한 허용', () => {
   test.use({ permissions: ['geolocation'], geolocation: { latitude: 33.4996, longitude: 126.5312 } })
 

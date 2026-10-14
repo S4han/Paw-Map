@@ -37,7 +37,8 @@ export function PlaceCard({ place, distance, selected, match, onSelect }: Props)
         <div className="flex items-baseline justify-between gap-2">
           <span className="truncate font-semibold">{place.name}</span>
           <span className="shrink-0 text-xs text-slate-500">
-            {categoryLabel[place.category]} · {formatDistance(distance)}
+            {categoryLabel[place.category]}
+            {place.subcategory && ` · ${place.subcategory}`} · {formatDistance(distance)}
           </span>
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
