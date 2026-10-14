@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Category, PetPlace, PetStatus } from '../types/place'
-import { filterPlaces } from './filters'
+import { categoriesForTab, filterPlaces } from './filters'
 
 const center = { lat: 33.4996, lng: 126.5312 }
 const all = new Set<Category>(['RESTAURANT', 'CAFE', 'STAY', 'ATTRACTION'])
@@ -38,5 +38,25 @@ describe('filterPlaces', () => {
     expect(filterPlaces(ps, center, 1000, all, 'ALLOWED_ONLY').map((x) => x.place.id)).toEqual(['ok'])
     expect(filterPlaces(ps, center, 1000, all, 'INCLUDE_UNKNOWN').map((x) => x.place.id).sort()).toEqual(['ok', 'unk'])
     expect(filterPlaces(ps, center, 1000, all, 'ALL')).toHaveLength(3)
+  })
+})
+
+describe('카테고리 탭·공간 필터', () => {
+  it("'전체'는 동반 장소 4종(반려 생활 제외), 그 밖은 한 종류", () => {
+    expect([...categoriesForTab('ALL')].sort()).toEqual(['ATTRACTION', 'CAFE', 'RESTAURANT', 'STAY'])
+    expect([...categoriesForTab('PET_SERVICE')]).toEqual(['PET_SERVICE'])
+  })
+
+  it('실내/실외 필터는 출처가 "가능"이라고 한 곳만 남긴다(정보 없음 제외)', () => {
+    const at = (indoorAllowed?: boolean, outdoorAllowed?: boolean): PetPlace => {
+      const p = place(`${indoorAllowed}-${outdoorAllowed}`, 0)
+      return { ...p, petConditions: { ...p.petConditions, indoorAllowed, outdoorAllowed } }
+    }
+    const places = [at(true, undefined), at(false, true), at(undefined, undefined)]
+    const ids = (space: 'ANY' | 'INDOOR' | 'OUTDOOR') =>
+      filterPlaces(places, center, 1000, categoriesForTab('ALL'), 'ALL', space).map((x) => x.place.id)
+    expect(ids('ANY')).toHaveLength(3)
+    expect(ids('INDOOR')).toEqual(['true-undefined'])
+    expect(ids('OUTDOOR')).toEqual(['false-true'])
   })
 })

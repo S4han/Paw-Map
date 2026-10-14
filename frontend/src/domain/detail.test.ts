@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { Evidence, PetConditions } from '../types/place'
-import { conditionRows, evidenceDateText } from './conditions'
+import type { Evidence, PetConditions, PetPlace } from '../types/place'
+import { cardTags, conditionRows, evidenceDateText, shortRegion } from './conditions'
 import { directionLinks, secureImageUrl, telHref } from './links'
 
 const cond = (c: Partial<PetConditions> = {}): PetConditions => ({ notes: [], fieldSources: {}, conflicts: [], ...c })
@@ -66,5 +66,37 @@ describe('links', () => {
   it('http 이미지는 https 로', () => {
     expect(secureImageUrl('http://tong.visitkorea.or.kr/a.jpg')).toBe('https://tong.visitkorea.or.kr/a.jpg')
     expect(secureImageUrl(undefined)).toBeNull()
+  })
+})
+
+describe('cardTags', () => {
+  const tags = (c: Partial<PetConditions>, extra: Partial<Pick<PetPlace, 'category' | 'subcategory' | 'parkingAvailable'>> = {}) =>
+    cardTags({ category: 'CAFE', petConditions: cond(c), ...extra }).map((t) => t.text)
+
+  it('크기는 정보가 없어도 "크기 정보 없음"으로 보여 준다', () => {
+    expect(tags({})).toEqual(['크기 정보 없음'])
+    expect(tags({ noWeightLimit: true })).toEqual(['전 견종'])
+    expect(tags({ maxWeightKg: 10, maxWeightExclusive: true })).toEqual(['10kg 미만'])
+    expect(tags({ conflicts: ['maxWeightKg'] })).toEqual(['크기 출처마다 다름'])
+  })
+
+  it('실내·실외·마릿수·주차', () => {
+    expect(tags({ maxWeightKg: 5, indoorAllowed: true, maxDogs: 2 }, { parkingAvailable: true })).toEqual(['5kg 이하', '실내 가능', '최대 2마리', '주차 가능'])
+    expect(tags({ indoorAllowed: false, outdoorAllowed: true })).toEqual(['크기 정보 없음', '실외만'])
+    expect(tags({}, { parkingAvailable: false })).toEqual(['크기 정보 없음']) // 주차 불가는 태그로 강조하지 않음
+  })
+
+  it('반려 생활은 세부 분류만', () => {
+    expect(tags({}, { category: 'PET_SERVICE', subcategory: '동물병원' })).toEqual(['동물병원'])
+  })
+})
+
+describe('shortRegion', () => {
+  it('시도 이름을 줄이고 시군구까지만', () => {
+    expect(shortRegion('제주특별자치도 제주시 가상로 1')).toBe('제주 제주시')
+    expect(shortRegion('서울특별시 중구 세종대로 1')).toBe('서울 중구')
+    expect(shortRegion('전라북도 전주시 완산구')).toBe('전북 전주시')
+    expect(shortRegion('제주시 가상로 1')).toBe('제주시')
+    expect(shortRegion(undefined)).toBe('')
   })
 })

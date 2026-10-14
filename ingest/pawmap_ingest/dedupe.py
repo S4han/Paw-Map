@@ -52,6 +52,13 @@ class DedupeResult:
     review: list[tuple[str, str, float]] = field(default_factory=list)
 
 
+def _same_or_none(a: bool | None, b: bool | None) -> bool | None:
+    """한쪽만 알면 그 값, 둘이 다르면 모름(자동으로 고르지 않음)."""
+    if a is None or b is None:
+        return a if b is None else b
+    return a if a == b else None
+
+
 def merge(primary: PetPlace, other: PetPlace) -> PetPlace:
     """근거는 모두 유지하고 동반 상태·조건은 규칙으로 다시 계산한다(임의로 한쪽을 고르지 않음)."""
     evidence = primary.evidence + other.evidence
@@ -89,6 +96,7 @@ def merge(primary: PetPlace, other: PetPlace) -> PetPlace:
             "aliases": (primary.aliases or []) + [other.id],
             "address": primary.address or other.address,
             "phone": primary.phone or other.phone,
+            "parking_available": _same_or_none(primary.parking_available, other.parking_available),
             "evidence": evidence,
             "pet_status": status,
             "conflicting_evidence": conflict,

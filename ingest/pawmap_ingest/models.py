@@ -78,6 +78,7 @@ class PetPlace(Model):
     longitude: float = Field(ge=-180, le=180)
     address: str | None = None
     phone: str | None = None
+    parking_available: bool | None = None  # 출처가 준 주차 가능 여부(한국문화정보원). 없으면 모름
     image_url: str | None = None
     image_copyright: Literal["Type1", "Type3"] | None = None
     pet_status: PetStatus

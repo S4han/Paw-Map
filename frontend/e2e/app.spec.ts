@@ -9,17 +9,23 @@ test.beforeEach(async ({ page }) => {
   await expect(summary(page)).toContainText('6곳')
 })
 
-test('첫 화면: 가상 데이터 안내, 목록 모드, 출처·기준일', async ({ page }) => {
+test('첫 화면: 목록이 기본, 지도보기로 전환, 출처·기준일', async ({ page }) => {
   await expect(page.getByText('가상(Mock) 데이터로 보여주는 개발용 화면')).toBeVisible()
+  await expect(page.getByRole('tab', { name: '전체' })).toHaveAttribute('aria-selected', 'true')
+  await page.getByRole('button', { name: /지도보기/ }).click()
   await expect(page.getByText('카카오 지도 키가 없어 목록으로 보여드려요')).toBeVisible()
+  await page.getByRole('button', { name: /목록보기/ }).click()
   await expect(page.getByText(/자료:/)).toContainText('가상 데이터')
   await expect(page.getByText('방문 전 업체에 꼭 확인하세요')).toBeVisible()
 })
 
-test('카테고리·동반 상태 필터', async ({ page }) => {
-  await page.getByRole('group', { name: '카테고리' }).getByRole('button', { name: /카페/ }).click()
-  await expect(summary(page)).toContainText('3곳') // 카페 3곳(멍멍·오름베이커리·골목) 제외
-  await page.getByRole('group', { name: '카테고리' }).getByRole('button', { name: /카페/ }).click()
+test('카테고리 탭·동반 상태·공간 필터', async ({ page }) => {
+  await page.getByRole('tab', { name: /카페/ }).click()
+  await expect(summary(page)).toContainText('3곳') // 동반 가능 카페: 멍멍·오름베이커리·골목
+  await page.getByLabel('공간').selectOption('INDOOR')
+  await expect(summary(page)).toContainText('1곳') // 실내 가능이라고 출처가 말한 곳만(멍멍카페)
+  await page.getByLabel('공간').selectOption('ANY')
+  await page.getByRole('tab', { name: '전체' }).click()
   await page.getByLabel('동반 상태').selectOption('ALL')
   await expect(summary(page)).toContainText('9곳')
   await expect(page.getByText('⚠️ 출처 간 정보 충돌').first()).toBeVisible()
@@ -117,14 +123,22 @@ test('신선도·제보: 확인일 없는 장소는 재확인 안내, 제보는 
   await expect(dialog.getByRole('link', { name: /정보 수정 제보하기/ })).toHaveAttribute('href', /github\.com\/S4han\/Paw-Map\/issues\/new\?title=/)
 })
 
-test('반려 생활: 기본으로 꺼져 있고, 켜면 병원·미용 등이 세부 분류와 함께 보인다', async ({ page }) => {
-  const chip = page.getByRole('group', { name: '카테고리' }).getByRole('button', { name: /반려 생활/ })
-  await expect(chip).toHaveAttribute('aria-pressed', 'false')
+test('반려 생활: 전체 탭에는 없고, 반려 생활 탭에서 세부 분류와 함께 보인다', async ({ page }) => {
+  const tab = page.getByRole('tab', { name: /반려 생활/ })
+  await expect(tab).toHaveAttribute('aria-selected', 'false')
   await expect(page.getByText('(가상) 한라동물병원')).toHaveCount(0)
-  await chip.click()
-  await expect(summary(page)).toContainText('8곳')
+  await tab.click()
+  await expect(summary(page)).toContainText('2곳')
   await expect(page.getByRole('button', { name: /\(가상\) 한라동물병원/ })).toContainText('반려 생활 · 동물병원')
   await expect(page.getByText(/반려 생활은 동반 장소가 아니라/)).toBeVisible()
+})
+
+test('카드: 크기 태그·♡ 저장', async ({ page }) => {
+  const card = page.getByRole('button', { name: /\(가상\) 멍멍카페/ })
+  await expect(card).toContainText('15kg 이하')
+  await expect(page.getByRole('button', { name: /\(가상\) 오름베이커리/ })).toContainText('크기 정보 없음')
+  await page.getByRole('listitem').filter({ has: card }).getByRole('button', { name: '저장', exact: true }).click()
+  await expect(page.getByRole('button', { name: /저장한 곳 1/ })).toBeVisible()
 })
 
 test.describe('위치 권한 허용', () => {
