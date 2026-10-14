@@ -3,6 +3,8 @@
 - 강원(51)·전북(52)은 특별자치도 전환 후 코드다. 관광공사가 이 코드로 목록을 주는지는 제주(50) 외에 아직 실측하지 않았다(❓) —
   목록이 0건이면 가공 보고서에 그대로 드러난다.
 - 주소 앞부분은 식약처 업소주소·한국문화정보원 시도 명칭을 지역별로 나누는 데 쓴다. 옛 이름(전라북도·강원도)도 함께 받는다.
+- 통합 시도: 행정안전부 인허가 데이터는 광주·전남을 "전남광주통합특별시"로 적는다(✅ 실측 2026-10-14). 앱은 시도 코드를
+  그대로 쓰므로 옛 광주광역시 자치구(동구·서구·남구·북구·광산구)는 광주(29), 나머지 시·군은 전남(46)으로 나눈다.
 """
 
 from __future__ import annotations
@@ -37,6 +39,10 @@ SIDOS: tuple[Sido, ...] = (
     Sido("52", "전북", ("전북", "전라북도")),
 )
 BY_CODE = {s.code: s for s in SIDOS}
+# 통합 시도 이름 → (옛 시도 코드, 그 시도의 시군구 이름들), 나머지 시군구가 속하는 코드
+MERGED: dict[str, tuple[tuple[str, frozenset[str]], str]] = {
+    "전남광주통합특별시": (("29", frozenset({"동구", "서구", "남구", "북구", "광산구"})), "46"),
+}
 ALL_CODES = tuple(s.code for s in SIDOS)
 
 
@@ -45,6 +51,21 @@ def sido(code: str) -> Sido:
         return BY_CODE[code]
     except KeyError:
         raise ValueError(f"알 수 없는 시도 코드: {code} (사용 가능: {', '.join(ALL_CODES)})") from None
+
+
+def address_sido(address: str) -> str | None:
+    """주소(또는 시도 명칭) → 시도 코드. 모르는 앞부분이면 None(호출한 쪽에서 건수를 보고)."""
+    parts = address.split()
+    if not parts:
+        return None
+    first = parts[0]
+    if first in MERGED:
+        (code, districts), rest = MERGED[first]
+        return code if len(parts) > 1 and parts[1] in districts else rest
+    for s in SIDOS:
+        if first.startswith(s.prefixes):
+            return s.code
+    return None
 
 
 def parse_region_arg(value: str) -> list[str]:

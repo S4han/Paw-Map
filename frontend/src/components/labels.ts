@@ -20,6 +20,7 @@ export const sourceLabel: Record<SourceId, string> = {
   MFDS_PET: '식약처',
   KCISA_PET: '한국문화정보원',
   MOIS_VET: '행정안전부 인허가',
+  MOIS_PHARMACY: '행정안전부 동물약국 인허가',
   GOOGLE: 'Google',
   MOCK: '가상 데이터',
 }

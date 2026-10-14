@@ -105,7 +105,7 @@ def test_merges_into_kcisa_hospital_keeping_kcisa_id():
     inp = BuildInputs(
         region_code="11", version="20261014", fetched_at="2026-10-14T00:00:00+09:00",
         kcisa_rows=[kcisa_row], kcisa_fetched_at="2026-10-14",
-        mois_items=[item("1", "청담동물병원", "서울특별시 강남구 도산대로90길 17"), item("9", "새동물병원", "서울특별시 강남구 도산대로 9", x="204800", y="446900")],
+        mois={"vet": [item("1", "청담동물병원", "서울특별시 강남구 도산대로90길 17"), item("9", "새동물병원", "서울특별시 강남구 도산대로 9", x="204800", y="446900")]},
         mois_fetched_at="2026-10-14",
     )
     result = build_region(inp)
@@ -116,3 +116,37 @@ def test_merges_into_kcisa_hospital_keeping_kcisa_id():
     assert merged.last_verified_at == "2026-10-12"  # 두 출처의 확인일 중 최근
     assert by_name["새동물병원"].pet_status == "UNKNOWN"
     assert any(s.source == "MOIS_VET" for s in result.sources)
+
+
+def test_pharmacy_kind_uses_its_own_source_id_and_subcategory():
+    p = mois.places([item("7", "청담동물약국", "서울특별시 강남구 도산대로 1")], "11", "2026-10-14", mois.MoisStats(), kind=mois.PHARMACY)[0]
+    assert p.id == "moisph:7" and p.subcategory == "동물약국"
+    assert p.evidence[0].source == "MOIS_PHARMACY" and "동물약국" in p.evidence[0].claim
+
+
+def test_hospital_and_pharmacy_in_same_building_stay_separate():
+    inp = BuildInputs(
+        region_code="11", version="20261014", fetched_at="2026-10-14T00:00:00+09:00",
+        mois={
+            "vet": [item("1", "청담동물병원", "서울특별시 강남구 도산대로90길 17")],
+            "pharmacy": [item("1", "청담약국", "서울특별시 강남구 도산대로90길 17")],  # 주소·전화·좌표가 같아도
+        },
+        mois_fetched_at="2026-10-14",
+    )
+    result = build_region(inp)
+    assert sorted(p.subcategory for p in result.services) == ["동물병원", "동물약국"]
+    assert {s.source for s in result.sources} == {"MOIS_VET", "MOIS_PHARMACY"}
+
+
+def test_merged_gwangju_jeonnam_split_by_district():
+    from pawmap_ingest.regions import address_sido
+
+    assert address_sido("전남광주통합특별시 광산구 풍영철길로 20-6") == "29"
+    assert address_sido("전남광주통합특별시 북구 유동길 46") == "29"
+    assert address_sido("전남광주통합특별시 영광군 영광읍 대하길2길 4") == "46"
+    assert address_sido("전라남도 순천시 1") == "46" and address_sido("광주광역시 서구 1") == "29"
+    assert address_sido("경기도 광주시 1") == "41"
+    assert address_sido("어딘가특별시 1") is None and address_sido("") is None
+    items = [item("1", "광산동물병원", "전남광주통합특별시 광산구 풍영철길로 20-6"), item("2", "영광동물병원", "전남광주통합특별시 영광군 영광읍 1")]
+    assert [p.name for p in mois.places(items, "29", "2026-10-14", mois.MoisStats())] == ["광산동물병원"]
+    assert [p.name for p in mois.places(items, "46", "2026-10-14", mois.MoisStats())] == ["영광동물병원"]

@@ -1,8 +1,8 @@
 """명령줄 도구.
 
   pawmap-ingest build --region 50|11,26|all --out <데이터셋 폴더> [--mfds 식약처.xlsx --mfds-date YYYY-MM-DD]
-                                         [--kcisa 한국문화정보원.csv --kcisa-date YYYY-MM-DD] [--mois-vet]
-                                         관광공사·식약처·한국문화정보원·행정안전부(동물병원) → 시도 파일 + 격자 칸 + 검증 + 보고서
+                                         [--kcisa 한국문화정보원.csv --kcisa-date YYYY-MM-DD] [--mois-vet] [--mois-pharmacy]
+                                         관광공사·식약처·한국문화정보원·행정안전부(동물병원·동물약국) → 시도 파일 + 격자 칸 + 검증 + 보고서
   pawmap-ingest tile <시도 파일 폴더> <배포 폴더>  시도 파일 데이터셋 → 0.1도 격자 칸 파일(배포용)
   pawmap-ingest validate <데이터셋 폴더>   manifest·시도 파일의 스키마와 판정 규칙 검증
   pawmap-ingest schema [출력 파일]         데이터셋 JSON 스키마 내보내기
@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections import Counter
 import os
 import sys
 from datetime import datetime, timedelta, timezone
@@ -98,13 +99,21 @@ def run_build(args: argparse.Namespace) -> int:
             raise SystemExit("[중단] --kcisa-date(한국문화정보원 파일을 받은 날, YYYY-MM-DD)가 필요합니다")
         base.kcisa_rows = kcisa_source.read_csv(Path(args.kcisa))
         base.kcisa_fetched_at = args.kcisa_date
-    if args.mois_vet:
-        # 전국을 한 번 받아(100건씩 약 110회) 시도마다 나눈다. 같은 날 다시 실행하면 캐시를 쓴다
+    kinds = [k for k, on in (("vet", args.mois_vet), ("pharmacy", args.mois_pharmacy)) if on]
+    if kinds:
+        # 업종마다 전국을 한 번 받아(100건씩) 시도마다 나눈다. 같은 날 다시 실행하면 캐시를 쓴다
         today = now.strftime("%Y-%m-%d")
-        items, mois_date, calls = mois_source.load_or_fetch(mois_source.http_fetcher(_env_key("DATA_GO_KR_SERVICE_KEY")), cache / "mois_vet.json", today)
-        print(f"행정안전부 동물병원: 전국 {len(items)}건 ({'캐시 재사용' if calls == 0 else f'호출 {calls}회'})")
-        base.mois_items = items
-        base.mois_fetched_at = mois_date
+        key = _env_key("DATA_GO_KR_SERVICE_KEY")
+        base.mois = {}
+        for k in kinds:
+            kind = mois_source.KINDS[k]
+            items, _, calls = mois_source.load_or_fetch(mois_source.http_fetcher(key, kind), cache / f"mois_{k}.json", today)
+            print(f"행정안전부 {kind.subcategory}: 전국 {len(items)}건 ({'캐시 재사용' if calls == 0 else f'호출 {calls}회'})")
+            unknown = Counter(mois_source.first_token(i) for i in items if mois_source.item_sido(i) is None)
+            if unknown:  # 시도를 알 수 없는 주소(새 통합 시도 이름 등) — 어느 시도에도 들어가지 않으므로 알린다
+                print(f"  [주의] 시도를 알 수 없는 주소 {sum(unknown.values())}건: {dict(unknown.most_common(5))}")
+            base.mois[k] = items
+        base.mois_fetched_at = today
 
     # 시도 파일은 작업 폴더에 쌓고(여러 날에 나눠 가공해도 이어짐), 끝에 배포 폴더(--out)로 격자 칸 파일을 만든다.
     work = Path(args.work_dir)
@@ -158,6 +167,7 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--kcisa", help="한국문화정보원 반려동물 동반 가능 문화시설 위치 데이터 csv")
     b.add_argument("--kcisa-date", help="한국문화정보원 파일을 받은 날 YYYY-MM-DD")
     b.add_argument("--mois-vet", action="store_true", help="행정안전부 동물병원 인허가(공공데이터포털 15154952, 활용신청 필요)")
+    b.add_argument("--mois-pharmacy", action="store_true", help="행정안전부 동물약국 인허가(활용신청 필요)")
     b.add_argument("--skip-kto", action="store_true")
     b.add_argument("--max-calls", type=int, default=800, help="관광공사 실행당 호출 상한")
     b.add_argument("--cache-dir", default="cache")

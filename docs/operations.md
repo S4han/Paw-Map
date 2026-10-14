@@ -84,14 +84,15 @@ npx --yes wrangler@4 pages deploy dist --project-name paw-map --branch main
 ### 2.4 데이터 갱신 절차 (월 1회 권장, 격자 방식)
 
 0. **선행:** 격자 방식 코드가 main 에 병합·자동 배포된 뒤에 한다(예전 코드는 칸 파일을 못 읽음).
+   - **맨 먼저 `git checkout main && git pull`.** 6번의 `wrangler pages deploy` 는 내 작업 폴더의 앱 코드까지 빌드해 올리므로, 머지 전 코드면 자동 배포된 새 앱을 예전 앱으로 덮어쓴다(2026-10-14 실제 발생: 새 출처 이름이 안 보이고 새 병원이 필터에 가려짐)
 1. 원본 받기 → `ingest/input/`
    - 식약처 "반려동물 동반 가능 업소 현황" xlsx(식품안전나라) — 매번 새로 받는다. 받은 날 = `--mfds-date`
    - 한국문화정보원 CSV(공공데이터포털 15111389) — 새 판이 올라왔을 때만 바꾼다. 받은 날 = `--kcisa-date`
 2. 키 확인(값은 출력하지 않음, `DATA_GO_KR_SERVICE_KEY` 는 관광공사·행정안전부 공용): `for k in DATA_GO_KR_SERVICE_KEY KAKAO_REST_API_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do [ -n "${!k}" ] && echo "$k 있음" || echo "$k 없음"; done`
 3. 이전 배포본 백업: `cp -r frontend/public/data/live /tmp/live-prev`
 4. 작업 폴더 비우기(캐시는 남김): `rm -rf ingest/cache/dataset` — `ingest/cache/kto_detail`(관광공사 상세)·`geocode.json`(주소→좌표)은 지우지 않는다(호출 수 절약)
-5. 가공: `cd ingest && .venv/bin/pawmap-ingest build --region all --out ../frontend/public/data/live --mfds input/<식약처>.xlsx --mfds-date <받은날> --kcisa input/<문화정보원>.csv --kcisa-date <받은날> --mois-vet`
-   - `--mois-vet`: 행정안전부 동물병원 인허가 API(공공데이터포털 15154952, 같은 공공데이터 키에 활용신청 필요). 전국을 한 번(100건씩 약 110회) 받아 `ingest/cache/mois_vet.json` 에 두고, 같은 날 다시 실행하면 캐시를 쓴다. 영업 중인 곳만 반려 생활 → 동물병원에 넣는다
+5. 가공: `cd ingest && .venv/bin/pawmap-ingest build --region all --out ../frontend/public/data/live --mfds input/<식약처>.xlsx --mfds-date <받은날> --kcisa input/<문화정보원>.csv --kcisa-date <받은날> --mois-vet --mois-pharmacy`
+   - `--mois-vet`: 행정안전부 동물병원 인허가 API(공공데이터포털 15154952, 같은 공공데이터 키에 활용신청 필요). 전국을 한 번(100건씩 약 110회) 받아 `ingest/cache/mois_vet.json` 에 두고, 같은 날 다시 실행하면 캐시를 쓴다. `--mois-pharmacy` 도 같은 방식(동물약국). 영업 중인 곳만 반려 생활 → 동물병원·동물약국에 넣는다
    - `[멈춤]`(관광공사 호출 상한) → 다음 날 출력된 "남은 시도만 다시: --region …" 그대로 실행(같은 명령에서 `--region` 만 바꿈). 모두 끝나야 `--out` 에 칸 파일이 만들어진다
    - 끝에 "## 검증 - 통과", 시도별 건수가 이전과 크게 다르지 않은지(전국 동반 장소 약 7,000·반려 생활 약 20,000, 2026-10-14 기준) 확인. 시도별 보고서 `reports/ingest-*-{코드}.md`
 6. 검사·빌드·배포: `cd ../frontend && npm test && VITE_DATASET_BASE=/data/live npm run build && npm run check:secrets && npx --yes wrangler@4 pages deploy dist --project-name paw-map --branch main`

@@ -40,6 +40,9 @@ def distance_m(a: PetPlace, b: PetPlace) -> float:
 def same_place(a: PetPlace, b: PetPlace) -> bool:
     if distance_m(a, b) > NEAR_M:
         return False
+    # 반려 생활끼리는 세부 종류가 다르면 다른 곳(같은 건물의 동물병원과 동물약국은 주소·전화가 같을 수 있다)
+    if a.category == b.category == "PET_SERVICE" and a.subcategory and b.subcategory and a.subcategory != b.subcategory:
+        return False
     if norm_name(a.name) and norm_name(a.name) == norm_name(b.name):
         return True
     if a.address and b.address and norm_address(a.address) == norm_address(b.address):
