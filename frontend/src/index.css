@@ -9,3 +9,11 @@ html,
 body {
   overscroll-behavior: none;
 }
+
+/* iPhone Safari 는 글자가 16px 보다 작은 입력창을 누르면 화면을 확대하고, 검색이 끝나도 되돌리지 않는다.
+   레이어 밖 규칙이라 Tailwind 의 text-sm 보다 우선한다(확대 자체를 막는 viewport 설정은 접근성 때문에 쓰지 않음) */
+input,
+select,
+textarea {
+  font-size: 16px;
+}
