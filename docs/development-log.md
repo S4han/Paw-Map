@@ -103,4 +103,4 @@
 
 - 사용자 결정: 즐겨찾기·데이터 신선도·여행 코스 먼저, 제보는 GitHub 이슈 링크로. 관리자 검증·앱 내 제보 저장은 다음 단계
 - 추가: `domain/freshness.ts`(출처 확인일 기준 1년/2년, 날짜 없음 별도), `domain/course.ts`(관광지→음식점→카페, 동반 가능만, 조건 불일치 제외, 10km 상한), `domain/favorites.ts` + `hooks/useFavorites.ts`(localStorage), `links.ts` `reportIssueUrl`, `components/CourseSheet.tsx`. 카드에 신선도, 상세에 ☆ 저장·재확인 안내·제보 링크, 목록 위 "★ 저장한 곳"·"🧭 코스 추천"
-- 테스트: 단위 7건 추가(`step10.test.ts`) — 이 환경 임시 하네스로 통과(데이터셋 2건은 하네스가 파일을 못 읽는 기존 제약). E2E 3건 추가(즐겨찾기·코스·신선도/제보) — 이 환경은 npm 미설치로 실행 못 함, Codespaces 확인 필요
+- 테스트(Codespaces, 사용자 실행): Vitest 52건 통과(STEP 10 단위 9건 포함), 빌드(tsc + vite) 통과, Playwright E2E 11건 통과(STEP 10 3건 포함)
