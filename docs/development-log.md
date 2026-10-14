@@ -104,3 +104,8 @@
 - 사용자 결정: 즐겨찾기·데이터 신선도·여행 코스 먼저, 제보는 GitHub 이슈 링크로. 관리자 검증·앱 내 제보 저장은 다음 단계
 - 추가: `domain/freshness.ts`(출처 확인일 기준 1년/2년, 날짜 없음 별도), `domain/course.ts`(관광지→음식점→카페, 동반 가능만, 조건 불일치 제외, 10km 상한), `domain/favorites.ts` + `hooks/useFavorites.ts`(localStorage), `links.ts` `reportIssueUrl`, `components/CourseSheet.tsx`. 카드에 신선도, 상세에 ☆ 저장·재확인 안내·제보 링크, 목록 위 "★ 저장한 곳"·"🧭 코스 추천"
 - 테스트(Codespaces, 사용자 실행): Vitest 52건 통과(STEP 10 단위 9건 포함), 빌드(tsc + vite) 통과, Playwright E2E 11건 통과(STEP 10 3건 포함)
+
+## 데이터 확충 — 한국문화정보원 자료 실측 준비 (2026-10-14)
+
+- 사용자 결정: 데이터 확충 진행. 후보: 공공데이터포털 15111389(한국문화정보원 전국 반려동물 동반 가능 문화시설 위치 데이터, CSV, 2025-03-24판 🔷 검색 요약). 열 구성·이용허락범위는 미확인 ❓ — 이 환경은 data.go.kr 접속 불가
+- 추가: `poc/kcisa_pet_facilities.py`(머리글 키워드로 열 탐지, 집계만 출력, 기존 데이터셋과 50m+이름/전화 겹침 계산). 가짜 CSV(cp949)로 동작 확인

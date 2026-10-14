@@ -53,3 +53,13 @@ python3 poc/mfds_pet_restaurants.py 받은파일.xlsx
 | `kto_pet.py` | 공공데이터포털 약 45회 | 무료(일 한도 내) |
 | `google_places.py --limit 20` | Text Search IDs Only 20회 + Place Details E+A 최대 20회 | 문서상 무료량(월 1,000건) 안 — **콘솔 가격표로 재확인 후 실행** |
 | `mfds_pet_restaurants.py` | 없음(파일 분석) | 0 |
+
+## 데이터 확충 검토: 한국문화정보원 반려동물 동반 시설 (2026-10-14)
+
+공공데이터포털 "한국문화정보원_전국 반려동물 동반 가능 문화시설 위치 데이터"(15111389) CSV를 `ingest/input/`에 올린 뒤:
+
+```bash
+python3 poc/kcisa_pet_facilities.py ingest/input/받은파일.csv
+```
+
+머리글·제주 건수·분류·반려동물 관련 열의 채움 비율·최종작성일 분포·현재 데이터셋과의 겹침을 출력한다(집계만). 원본 CSV와 `poc/out/`은 커밋하지 않는다.
