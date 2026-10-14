@@ -1,0 +1,60 @@
+{
+ "regionCode": "50",
+ "version": "mock-20261013",
+ "places": [
+  {
+   "id": "mock:s1",
+   "name": "(가상) 한라동물병원",
+   "category": "PET_SERVICE",
+   "subcategory": "동물병원",
+   "latitude": 33.501,
+   "longitude": 126.532,
+   "address": "제주특별자치도 제주시 가상로 21",
+   "petStatus": "ALLOWED",
+   "petConditions": {
+    "notes": [],
+    "fieldSources": {},
+    "conflicts": []
+   },
+   "evidence": [
+    {
+     "source": "MOCK",
+     "type": "OFFICIAL",
+     "petStatus": "ALLOWED",
+     "checkedAt": "2025-03-24",
+     "fetchedAt": "2026-10-13T00:00:00+09:00",
+     "claim": "한국문화정보원 반려동물 동반 가능(동물병원) (가상)"
+    }
+   ],
+   "conflictingEvidence": false,
+   "lastVerifiedAt": "2025-03-24"
+  },
+  {
+   "id": "mock:s2",
+   "name": "(가상) 멍멍미용실",
+   "category": "PET_SERVICE",
+   "subcategory": "미용",
+   "latitude": 33.498,
+   "longitude": 126.528,
+   "address": "제주특별자치도 제주시 가상로 22",
+   "petStatus": "ALLOWED",
+   "petConditions": {
+    "notes": [],
+    "fieldSources": {},
+    "conflicts": []
+   },
+   "evidence": [
+    {
+     "source": "MOCK",
+     "type": "OFFICIAL",
+     "petStatus": "ALLOWED",
+     "checkedAt": "2025-03-24",
+     "fetchedAt": "2026-10-13T00:00:00+09:00",
+     "claim": "한국문화정보원 반려동물 동반 가능(미용) (가상)"
+    }
+   ],
+   "conflictingEvidence": false,
+   "lastVerifiedAt": "2025-03-24"
+  }
+ ]
+}

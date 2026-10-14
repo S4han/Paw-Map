@@ -1,5 +1,7 @@
 """한국문화정보원 CSV 어댑터: 원문 → 조건 변환 규칙과 기존 출처와의 병합(네트워크·실파일 없이)."""
 
+import json
+
 import pytest
 
 from pawmap_ingest.build import BuildInputs, build_region
@@ -143,7 +145,53 @@ def test_merge_with_existing_source_and_conflict():
 
 def test_build_region_reports_kcisa():
     inp = BuildInputs(region_code="50", version="20261014", fetched_at="2026-10-14T09:00:00+09:00", kcisa_rows=[row(), row(name="가상약국", category3="동물약국")], kcisa_fetched_at="2026-10-14")
-    places, report, sources = build_region(inp)
-    assert [s.source for s in sources] == ["KCISA_PET"] and len(places) == 1
-    text = report.markdown()
-    assert "한국문화정보원 반려동물 동반 시설" in text and "동물약국" in text and "기존 ← 한국문화정보원: 병합 0건" in text
+    result = build_region(inp)
+    assert [s.source for s in result.sources] == ["KCISA_PET"] and len(result.places) == 1
+    # 동물약국은 동반 장소가 아니라 반려 생활(별도 목록)
+    assert [(p.category, p.subcategory) for p in result.services] == [("PET_SERVICE", "동물약국")]
+    text = result.report.markdown()
+    assert "반려 생활 분류(별도 파일) {'동물약국': 1}" in text and "기존 ← 한국문화정보원: 병합 0건" in text
+
+
+def test_write_outputs_services_file_and_multi_region_manifest(tmp_path):
+    from pawmap_ingest.build import write_outputs
+    from pawmap_ingest.cli import validate
+
+    out = tmp_path / "live"
+    jeju = BuildInputs(region_code="50", version="20261014", fetched_at="2026-10-14T09:00:00+09:00",
+                       kcisa_rows=[row(), row(name="가상병원", category3="동물병원", road_address="제주시 9")], kcisa_fetched_at="2026-10-14")
+    write_outputs(out, jeju, build_region(jeju))
+    seoul = BuildInputs(region_code="11", version="20261014", fetched_at="2026-10-14T09:00:00+09:00",
+                        kcisa_rows=[row(name="서울카페", category3="카페", sido="서울특별시", lat="37.56", lng="126.97")], kcisa_fetched_at="2026-10-15")
+    write_outputs(out, seoul, build_region(seoul))
+    assert validate(out) == []
+
+    manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+    regions = {r["code"]: r for r in manifest["regions"]}
+    assert set(regions) == {"11", "50"} and regions["11"]["name"] == "서울"
+    assert regions["50"]["servicesFile"] == "services.50.json" and regions["50"]["servicesCount"] == 1
+    assert "servicesFile" not in regions["11"]
+    # 출처 목록은 시도를 따로 가공해도 하나로(가장 최근 수집일)
+    assert manifest["sources"] == [{"source": "KCISA_PET", "fetchedAt": "2026-10-15", "note": "파일 다운로드(공공데이터포털 15111389)"}]
+    services = json.loads((out / "services.50.json").read_text(encoding="utf-8"))
+    assert [p["subcategory"] for p in services["places"]] == ["동물병원"]
+
+    # 다시 가공했는데 반려 생활 자료가 없으면 예전 파일을 지운다
+    write_outputs(out, jeju, build_region(BuildInputs(region_code="50", version="20261014", fetched_at="x", kcisa_rows=[row()], kcisa_fetched_at="2026-10-14")))
+    assert not (out / "services.50.json").exists() and validate(out) == []
+
+
+def test_parse_region_arg():
+    from pawmap_ingest.regions import ALL_CODES, parse_region_arg
+
+    assert parse_region_arg("50") == ["50"]
+    assert parse_region_arg("11, 50,11") == ["11", "50"]
+    assert parse_region_arg("all") == list(ALL_CODES) and len(ALL_CODES) == 17
+    with pytest.raises(ValueError):
+        parse_region_arg("99")
+
+
+@pytest.mark.parametrize("sido_name, code", [("전북특별자치도", "52"), ("전라북도", "52"), ("강원특별자치도", "51"), ("충청남도", "44"), ("광주광역시", "29"), ("경기도", "41")])
+def test_region_prefixes(sido_name, code):
+    stats = kcisa.KcisaStats()
+    assert kcisa.places([row(sido=sido_name)], code, "2026-10-14", stats) and stats.in_region == 1

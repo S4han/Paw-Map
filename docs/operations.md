@@ -37,7 +37,7 @@
 cd /workspaces/Paw-Map
 
 # 1) 데이터 가공(안 B면 --mfds 두 인자를 뺀다)
-cd ingest && .venv/bin/pawmap-ingest build --region 50 --out ../frontend/public/data/live \
+cd ingest && .venv/bin/pawmap-ingest build --region all --out ../frontend/public/data/live \
   --mfds input/dogs_info.xlsx --mfds-date YYYY-MM-DD \
   --kcisa input/kcisa_data.csv --kcisa-date YYYY-MM-DD && cd ..
 # --kcisa: 한국문화정보원 반려동물 동반 시설 CSV(공공데이터포털 15111389, 이용허락범위 제한 없음 — 2026-10-14 사용자 확인). --kcisa-date 는 파일을 받은 날
@@ -52,6 +52,10 @@ npm run check:secrets
 npx --yes wrangler@4 pages deploy dist --project-name paw-map --branch main
 ```
 
+- `--region`: `all`(17개 시도) 또는 `50`, `11,26`처럼 쉼표로. 시도별로 가공·저장하고 끝에 전체 검증한다. 시도별 보고서는 `reports/ingest-{날짜}-{코드}.md`.
+- **관광공사 호출 상한**(실행당 `--max-calls` 800, 일 1,000건 보고값 ⚠️)에 걸리면 그 시도부터 멈추고 끝난 시도 요약과 "남은 시도만 다시: --region …"을 출력한다(종료 코드 2). 끝난 시도 파일은 남는다. 다음 날 **남은 시도만** 같은 `--out` 으로 다시 실행한다(`all` 로 다시 돌리면 끝난 시도의 목록 호출을 또 써서 한도에 다시 걸릴 수 있음). 상세는 캐시(`ingest/cache/kto_detail`)를 재사용한다. 2026-10-14 첫 전국 가공: 15개 시도 완료, 강원·전북에서 멈춤. 중간 결과로 배포하면 남은 시도는 이전 데이터 그대로(또는 없음)이므로, 전국 첫 가공은 끝까지 마친 뒤 배포한다.
+- 식약처 주소→좌표 변환은 전국 약 2,800건(첫 실행만, 이후 `ingest/cache/geocode.json` 재사용). 카카오 로컬 무료량 안(❓ 콘솔 쿼터에서 확인).
+- 반려 생활 시설은 한국문화정보원 CSV(`--kcisa`)에서만 나온다. `--kcisa` 없이 가공하면 `services.*.json`이 지워진다.
 - **한 블록씩 실행하고, 앞 단계가 실패하면 다음 단계로 가지 않는다.** 여러 줄을 한꺼번에 붙여넣으면 뒤 명령이 앞 명령의 질문(y/n)에 입력되어 엉뚱하게 취소·진행될 수 있다(2026-10-13 발생).
 - 새 코드스페이스에는 `ingest/input/` 의 식약처 xlsx 가 없다(커밋하지 않는 파일) → 다시 올린 뒤 가공한다.
 - `public/data/live/`는 커밋하지 않지만 빌드 결과(`dist/`)에는 들어가 업로드된다 → **공개 범위(§1)를 정한 뒤에만** 실행한다.

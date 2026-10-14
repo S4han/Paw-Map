@@ -85,6 +85,7 @@ export function PlaceDetail({ place, distance, match, favorite, onToggleFavorite
           <section>
             <p className="text-sm text-slate-600">
               {categoryLabel[place.category]}
+              {place.subcategory && ` · ${place.subcategory}`}
               {distance !== null && ` · ${formatDistance(distance)}`}
             </p>
             <div className="mt-2 flex flex-wrap gap-1.5">

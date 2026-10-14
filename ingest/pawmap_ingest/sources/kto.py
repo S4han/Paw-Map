@@ -103,6 +103,7 @@ class KtoSource:
 
     def places(self, region_code: str, fetched_at: str) -> list[PetPlace]:
         result: list[PetPlace] = []
+        self.stats = KtoStats(calls=self.stats.calls)  # 시도별 통계, 호출 수는 실행 전체 누적(상한 판단)
         listed = self.list_region(region_code)
         self.stats.listed = len(listed)
         for item in listed:

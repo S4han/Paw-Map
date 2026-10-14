@@ -16,7 +16,11 @@ export const categories: { id: Category; name: string; icon: string }[] = [
   { id: 'CAFE', name: '카페', icon: '☕' },
   { id: 'STAY', name: '숙소', icon: '🏨' },
   { id: 'ATTRACTION', name: '관광지', icon: '🌳' },
+  { id: 'PET_SERVICE', name: '반려 생활', icon: '🏥' },
 ]
+
+// 처음 켜 두는 카테고리. 반려 생활은 기본으로 끈다(시설이 많아 동반 장소가 묻히지 않게, 사용자 결정 2026-10-14)
+export const DEFAULT_CATEGORIES: Category[] = ['RESTAURANT', 'CAFE', 'STAY', 'ATTRACTION']
 
 // 정보 수정 제보를 받는 곳(공개 저장소 이슈). GitHub 계정이 있어야 작성할 수 있다
 export const REPORT_ISSUES_NEW_URL = 'https://github.com/S4han/Paw-Map/issues/new'

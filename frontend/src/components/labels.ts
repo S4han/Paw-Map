@@ -12,6 +12,7 @@ export const categoryLabel: Record<Category, string> = {
   CAFE: '카페',
   STAY: '숙소',
   ATTRACTION: '관광지',
+  PET_SERVICE: '반려 생활',
 }
 
 export const sourceLabel: Record<SourceId, string> = {

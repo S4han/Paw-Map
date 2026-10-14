@@ -1,7 +1,7 @@
 """한국문화정보원 '전국 반려동물 동반 가능 문화시설 위치 데이터' CSV 어댑터(공공데이터포털 15111389).
 
 실측(api-analysis 부록, 2026-10-14): 31열, 좌표·최종작성일·동반 가능(Y/N)·크기·제한사항·실내/실외·추가 요금이 있다.
-- 우리 4개 카테고리에 해당하는 카테고리3만 쓴다(동물병원·약국·용품·미용은 제외).
+- 우리 4개 카테고리에 해당하는 카테고리3은 장소로, 동물병원·약국·미용·용품은 '반려 생활'(PET_SERVICE)로 따로 낸다.
 - 동반 가능 Y → ALLOWED, N → NOT_ALLOWED(출처가 명시한 값, 사용자 결정 2026-10-14). 그 밖의 값은 UNKNOWN.
 - 최종작성일은 출처가 준 날짜 → checkedAt. 파일을 받은 날은 fetchedAt(섞지 않음).
 - 원문을 조건으로 바꾸는 것은 명확한 표현만. "소형", "소형/중형"처럼 kg 기준이 없는 표현은 값으로 바꾸지 않고 notes 에 남긴다.
@@ -20,10 +20,10 @@ from pathlib import Path
 
 from ..models import Category, Evidence, PetConditions, PetPlace, PetStatus
 from ..normalize import norm_address, norm_name, norm_phone, stable_key
+from ..regions import sido
 from ..rules import decide_pet_status, last_verified_at
 
 SOURCE = "KCISA_PET"
-SIDO_PREFIX = {"50": ("제주",), "11": ("서울",), "51": ("강원",), "41": ("경기",)}
 CATEGORY_MAP: dict[str, Category] = {
     "펜션": "STAY",
     "호텔": "STAY",
@@ -34,6 +34,9 @@ CATEGORY_MAP: dict[str, Category] = {
     "카페": "CAFE",
     "식당": "RESTAURANT",
 }
+# 반려 생활 시설(사용자 결정 2026-10-14): 동반 장소가 아니라 반려견을 위한 시설. 별도 파일(services.{code}.json)로 내고
+# 화면에서는 기본으로 꺼 둔다. 반려견 조건 매칭·코스 추천에는 쓰지 않는다.
+SERVICE_TYPES = ("동물병원", "동물약국", "미용", "반려동물용품")
 _EMPTY = {"", "-", "해당없음"}
 _KG = re.compile(r"(\d+(?:\.\d+)?)\s*kg\s*(이하|미만)", re.IGNORECASE)
 _DOGS = re.compile(r"(\d+)\s*마리")
@@ -199,6 +202,7 @@ class KcisaStats:
     in_region: int = 0
     by_category3: Counter[str] = field(default_factory=Counter)
     used: int = 0
+    services_used: int = 0
     no_coords: list[str] = field(default_factory=list)
     duplicates_in_file: int = 0
     no_date: int = 0
@@ -206,18 +210,23 @@ class KcisaStats:
 
 
 def places(rows: list[KcisaRow], region_code: str, fetched_at: str, stats: KcisaStats) -> list[PetPlace]:
-    prefixes = SIDO_PREFIX.get(region_code)
-    if not prefixes:
-        raise ValueError(f"한국문화정보원 지역 필터가 정의되지 않은 지역 코드: {region_code}")
+    return split_places(rows, region_code, fetched_at, stats)[0]
+
+
+def split_places(rows: list[KcisaRow], region_code: str, fetched_at: str, stats: KcisaStats) -> tuple[list[PetPlace], list[PetPlace]]:
+    """(동반 장소, 반려 생활 시설) — 지역에 속한 행을 카테고리3 으로 나눈다. 그 밖의 분류는 버린다(보고서에 건수)."""
+    prefixes = sido(region_code).prefixes
     stats.rows = len(rows)
     seen: set[str] = set()
     result: list[PetPlace] = []
+    services: list[PetPlace] = []
     for row in rows:
         if not row.sido.startswith(prefixes):
             continue
         stats.in_region += 1
         stats.by_category3[row.category3] += 1
-        category = CATEGORY_MAP.get(row.category3)
+        is_service = row.category3 in SERVICE_TYPES
+        category: Category | None = "PET_SERVICE" if is_service else CATEGORY_MAP.get(row.category3)
         if category is None:
             continue
         lat, lng = _float(row.lat), _float(row.lng)
@@ -241,31 +250,35 @@ def places(rows: list[KcisaRow], region_code: str, fetched_at: str, stats: Kcisa
             "NOT_ALLOWED": f"한국문화정보원 반려동물 동반 불가({row.category3})",
             "UNKNOWN": f"한국문화정보원 동반 정보 미확인({row.category3})",
         }[parsed.pet_status]
-        raw = {k: v for k, v in (("크기", row.size), ("제한사항", row.limits), ("실내", row.indoor), ("실외", row.outdoor), ("추가요금", row.fee)) if v}
+        raw = {k: v for k, v in (("크기", row.size), ("제한사항", row.limits), ("실내", row.indoor), ("실외", row.outdoor), ("추가요금", row.fee)) if v not in _EMPTY}
         evidence = [
             Evidence(source=SOURCE, source_id=key, type="OFFICIAL", pet_status=parsed.pet_status, checked_at=checked, fetched_at=fetched_at, claim=claim, raw_text=raw or None)
         ]
         status, conflict = decide_pet_status(evidence)
         aliases = {f: PetConditions.model_fields[f].alias for f in parsed.values}
-        result.append(
-            PetPlace(
-                id=f"kcisa:{key}",
-                name=row.name,
-                category=category,
-                latitude=lat,
-                longitude=lng,
-                address=address,
-                phone=row.phone if norm_phone(row.phone) else None,
-                pet_status=status,
-                pet_conditions=PetConditions(
-                    **parsed.values,  # type: ignore[arg-type]
-                    notes=parsed.notes,
-                    field_sources={alias: [SOURCE] for alias in aliases.values()},  # type: ignore[misc]
-                ),
-                evidence=evidence,
-                conflicting_evidence=conflict,
-                last_verified_at=last_verified_at(evidence),
-            )
+        place = PetPlace(
+            id=f"kcisa:{key}",
+            name=row.name,
+            category=category,
+            subcategory=row.category3,
+            latitude=lat,
+            longitude=lng,
+            address=address,
+            phone=row.phone if norm_phone(row.phone) else None,
+            pet_status=status,
+            pet_conditions=PetConditions(
+                **parsed.values,  # type: ignore[arg-type]
+                notes=parsed.notes,
+                field_sources={alias: [SOURCE] for alias in aliases.values()},  # type: ignore[misc]
+            ),
+            evidence=evidence,
+            conflicting_evidence=conflict,
+            last_verified_at=last_verified_at(evidence),
         )
-        stats.used += 1
-    return result
+        if is_service:
+            services.append(place)
+            stats.services_used += 1
+        else:
+            result.append(place)
+            stats.used += 1
+    return result, services

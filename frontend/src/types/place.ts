@@ -1,7 +1,8 @@
 // 데이터셋 공통 모델. ingest/pawmap_ingest/models.py 와 같은 구조를 유지한다(docs/architecture.md §5).
 // 선택 필드가 undefined 이면 "확인되지 않음"이다. true/false 로 바꾸지 않는다.
 
-export type Category = 'RESTAURANT' | 'CAFE' | 'STAY' | 'ATTRACTION'
+// PET_SERVICE: 반려 생활 시설(동물병원·약국·미용·용품). 동반 장소가 아니며 매칭·코스에 쓰지 않는다
+export type Category = 'RESTAURANT' | 'CAFE' | 'STAY' | 'ATTRACTION' | 'PET_SERVICE'
 export type PetStatus = 'ALLOWED' | 'NOT_ALLOWED' | 'UNKNOWN'
 export type MatchStatus = 'MATCH' | 'MISMATCH' | 'NEEDS_CONFIRMATION'
 export type EvidenceType = 'OFFICIAL' | 'BUSINESS_CONFIRMED' | 'PROVIDER' | 'USER_REPORT'
@@ -50,6 +51,7 @@ export interface PetPlace {
   aliases?: string[]
   name: string
   category: Category
+  subcategory?: string // 출처의 세부 분류(예: 박물관, 동물병원)
   latitude: number
   longitude: number
   address?: string
@@ -88,5 +90,7 @@ export interface DatasetManifest {
     file: string
     count: number
     bbox: [minLat: number, minLng: number, maxLat: number, maxLng: number]
+    servicesFile?: string // 반려 생활 시설(그 카테고리를 켰을 때만 받음)
+    servicesCount?: number
   }[]
 }

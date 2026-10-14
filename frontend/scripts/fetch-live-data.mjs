@@ -28,8 +28,11 @@ if (manifest.isMock) throw new Error('운영 사이트의 데이터가 가상 �
 mkdirSync(out, { recursive: true })
 writeFileSync(out + 'manifest.json', manifestText)
 for (const region of manifest.regions) {
-  if (!/^[\w.-]+\.json$/.test(region.file)) throw new Error(`이상한 파일 이름: ${region.file}`)
-  writeFileSync(out + region.file, await get(region.file))
-  console.log(`✓ ${region.file} (${region.count}곳)`)
+  const files = [[region.file, region.count], ...(region.servicesFile ? [[region.servicesFile, region.servicesCount]] : [])]
+  for (const [file, count] of files) {
+    if (!/^[\w.-]+\.json$/.test(file)) throw new Error(`이상한 파일 이름: ${file}`)
+    writeFileSync(out + file, await get(file))
+    console.log(`✓ ${file} (${count}곳)`)
+  }
 }
 console.log(`실데이터 받음: ${base} · 생성 ${manifest.generatedAt}`)
