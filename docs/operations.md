@@ -27,8 +27,9 @@
 1. Cloudflare 가입 → **Workers & Pages → Create → Pages → Direct Upload** 로 프로젝트 `paw-map` 생성(빈 폴더 업로드 없이 이름만 만들어도 됨).
 2. Cloudflare **API 토큰** 생성: My Profile → API Tokens → Create Token → "Edit Cloudflare Workers" 템플릿 또는 사용자 지정(권한: Account · Cloudflare Pages · Edit). 
 3. GitHub 저장소 Settings → Secrets → **Codespaces** 에 `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`(Cloudflare 대시보드 오른쪽의 Account ID), `VITE_KAKAO_JS_KEY` 등록 → 코드스페이스 재시작.
-4. 카카오 콘솔 → 앱 → 플랫폼 키 → JavaScript SDK 도메인에 **실제 배포 주소** 추가. `pages.dev` 이름은 전 세계에서 하나라 이미 쓰인 경우 뒤에 문자가 붙는다(처음엔 `https://paw-map-1bi.pages.dev`, 2026-10-14부터 사용자 보고 `https://paw-map.pages.dev`). 첫 배포 출력·Pages 프로젝트 화면의 주소를 그대로 등록한다.
-5. (안 C) Cloudflare Zero Trust → Access → Applications → Self-hosted → 도메인 `paw-map.pages.dev`, 정책: 본인 이메일만 Allow.
+4. 카카오 콘솔 → 앱 → 플랫폼 키 → JavaScript SDK 도메인에 **실제 배포 주소** 추가. `pages.dev` 이름은 전 세계에서 하나라 이미 쓰인 경우 뒤에 문자가 붙는다(실제: `https://paw-map-1bi.pages.dev`, 2026-10-14 사용자 확인). 정확한 주소는 아래 명령의 `subdomain` 으로 확인한다:
+   `curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/paw-map" | python3 -c "import sys,json; print(json.load(sys.stdin)['result']['subdomain'])"`. 첫 배포 출력·Pages 프로젝트 화면의 주소를 그대로 등록한다.
+5. (안 C) Cloudflare Zero Trust → Access → Applications → Self-hosted → 도메인 = 프로젝트 주소, 정책: 본인 이메일만 Allow.
 
 ### 2.2 배포 명령
 
@@ -52,7 +53,7 @@ npx --yes wrangler@4 pages deploy dist --project-name paw-map --branch main
 - **한 블록씩 실행하고, 앞 단계가 실패하면 다음 단계로 가지 않는다.** 여러 줄을 한꺼번에 붙여넣으면 뒤 명령이 앞 명령의 질문(y/n)에 입력되어 엉뚱하게 취소·진행될 수 있다(2026-10-13 발생).
 - 새 코드스페이스에는 `ingest/input/` 의 식약처 xlsx 가 없다(커밋하지 않는 파일) → 다시 올린 뒤 가공한다.
 - `public/data/live/`는 커밋하지 않지만 빌드 결과(`dist/`)에는 들어가 업로드된다 → **공개 범위(§1)를 정한 뒤에만** 실행한다.
-- 업로드 출력의 `https://<8자리>.<프로젝트 주소>` 는 **배포마다 새로 생기는 미리보기 주소**라 카카오 도메인에 등록되어 있지 않아 지도가 뜨지 않는다(2026-10-13 확인). 점검·공유는 항상 고정 주소 `https://paw-map.pages.dev` 로 한다. 배포마다 주소를 카카오에 추가하지 않는다.
+- 업로드 출력의 `https://<8자리>.<프로젝트 주소>` 는 **배포마다 새로 생기는 미리보기 주소**라 카카오 도메인에 등록되어 있지 않아 지도가 뜨지 않는다(2026-10-13 확인). 점검·공유는 항상 고정 주소(프로젝트 `subdomain`, §2.1-4) 로 한다. 배포마다 주소를 카카오에 추가하지 않는다.
 - 새 프로젝트·새 주소는 HTTPS 인증서 발급에 수 분~수십 분이 걸려 그동안 `ERR_SSL_VERSION_OR_CIPHER_MISMATCH` 가 날 수 있다(2026-10-13 발생) → 기다렸다가 다시 접속.
 - `--branch` 가 프로젝트의 **프로덕션 브랜치**와 같아야 기본 주소(`프로젝트.pages.dev`)에 반영된다. 다르면 미리보기(`Preview`)로만 올라가 기본 주소는 "Nothing is here yet" 이 된다. wrangler 가 프로젝트를 처음 만들 때 **그때의 git 브랜치 이름**을 프로덕션 브랜치로 잡는다(2026-10-13: `claude/step9-release` 로 잡혀 있었음 → `main` 으로 변경).
   ```bash
@@ -66,7 +67,7 @@ npx --yes wrangler@4 pages deploy dist --project-name paw-map --branch main
 ### 2.3 자동 배포 (GitHub Actions, `.github/workflows/deploy.yml`)
 
 - **언제:** `main` 에 코드가 들어올 때(PR 병합 등) + Actions 화면에서 수동 실행(Run workflow).
-- **무엇을:** 단위 테스트 → 운영 사이트의 현재 실데이터 받기(`scripts/fetch-live-data.mjs`) → `pawmap-ingest validate` → 빌드 → 키 노출 검사 → `--branch main` 배포. 하나라도 실패하면 배포하지 않는다.
+- **무엇을:** 단위 테스트 → Cloudflare 에서 프로젝트 주소 읽기 → 그 주소의 현재 실데이터 받기(`scripts/fetch-live-data.mjs`) → `pawmap-ingest validate` → 빌드 → 키 노출 검사 → `--branch main` 배포. 하나라도 실패하면 배포하지 않는다.
 - **데이터는 자동 갱신하지 않는다.** 식약처 xlsx 는 사람이 내려받아야 하고 실데이터는 저장소에 두지 않으므로, 데이터 갱신은 §2.2 수동 절차 그대로. 자동 배포는 운영 중인 데이터를 그대로 이어 쓴다.
 - **준비(한 번):** 저장소 Settings → Secrets and variables → **Actions** → New repository secret 으로 `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `VITE_KAKAO_JS_KEY` 등록. Codespaces 시크릿과는 따로 등록해야 한다. 서버 키(공공데이터·카카오 REST)는 넣지 않는다.
 - 포크에서 온 PR 에는 시크릿이 전달되지 않고, 이 워크플로는 PR 에서 실행되지 않는다.
@@ -110,7 +111,7 @@ npx --yes wrangler@4 pages deploy dist --project-name paw-map --branch main
 | 증상 | 원인 | 조치 |
 |---|---|---|
 | "카카오 지도 키가 없어…" | 빌드 때 `VITE_KAKAO_JS_KEY` 없음 | 시크릿 확인 후 다시 빌드·업로드 |
-| "지도를 불러오지 못했어요" | 카카오 도메인 미등록·카카오맵 사용 OFF, 또는 배포별 미리보기 주소(`xxxxxxxx.paw-map.pages.dev`)로 접속 | 고정 주소로 접속. 그래도 같으면 카카오 콘솔 확인 |
+| "지도를 불러오지 못했어요" | 카카오 도메인 미등록·카카오맵 사용 OFF, 또는 배포별 미리보기 주소(`xxxxxxxx.<프로젝트 주소>`)로 접속 | 고정 주소로 접속. 그래도 같으면 카카오 콘솔 확인 |
 | 지역 검색 "지금은 쓸 수 없어요" | 카카오 무료량 소진(429) 가능 | 다음 날 자동 복구. 통계에서 확인 |
 | 가공 중 "[중단] 호출 상한" | 관광공사 실행당 800회 초과 | 다음 날 재실행(캐시 재사용) |
 | 수정이 화면에 안 보임 | 서비스 워커 캐시 | 새로고침 두 번 또는 앱 다시 열기 |
