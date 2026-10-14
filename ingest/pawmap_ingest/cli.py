@@ -100,8 +100,10 @@ def run_build(args: argparse.Namespace) -> int:
         try:
             result = build_region(inp)
         except BudgetExceeded as e:
-            print(f"[멈춤] {code} {sido(code).name}: {e}")
-            print(f"완료된 시도: {', '.join(done) or '없음'} / 남은 시도: {', '.join(c for c in codes if c not in done)}")
+            rest = [c for c in codes if c not in done]
+            print("\n".join(["# 가공 요약(중간에 멈춤)", *summary]))
+            print(f"\n[멈춤] {code} {sido(code).name}: {e}")
+            print(f"남은 시도만 다시: --region {','.join(rest)} (같은 --out 폴더에 이어서 저장, 끝난 시도는 그대로)")
             return 2
         finally:
             if base.geocoder:
